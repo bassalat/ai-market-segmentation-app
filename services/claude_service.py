@@ -61,18 +61,20 @@ class ClaudeService:
         {search_results}
         
         Please provide a comprehensive market analysis including:
-        1. Total Addressable Market estimation with size and growth projections
+        1. Total Addressable Market estimation with size and growth projections (ALL MONETARY VALUES MUST BE IN USD - convert from other currencies if needed)
         2. 4-6 key market insights and opportunities
         3. Industry trends affecting this business
         4. Factors driving industry growth (technology, regulations, consumer behavior, etc.)
         5. Industry CAGR (Compound Annual Growth Rate) with timeframe
         6. Current commercial urgencies and market pressures
-        7. Top 5 competitors with their funding status and solution specialties
+        7. Top 5 competitors with their funding status and solution specialties (funding amounts in USD)
         8. Competitive landscape overview
+        
+        IMPORTANT: All monetary values, market sizes, and funding amounts MUST be converted to USD. If source data is in EUR, GBP, JPY, or other currencies, convert to USD using current exchange rates.
         
         Format your response as JSON with the following structure:
         {{
-            "total_addressable_market": "TAM description with size estimates and projections",
+            "total_addressable_market": "TAM description with size estimates in USD (e.g., $XX billion USD)",
             "key_insights": ["insight1", "insight2", "insight3", "insight4"],
             "industry_trends": ["trend1", "trend2", "trend3", "trend4"],
             "industry_growth_factors": ["factor1", "factor2", "factor3"],
@@ -82,7 +84,7 @@ class ClaudeService:
             "top_competitors": [
                 {{
                     "name": "Competitor Name",
-                    "funding": "Funding amount and stage",
+                    "funding": "$XX million USD (Series X)",
                     "solution_specialty": "What they specialize in",
                     "market_position": "Market position description"
                 }}
@@ -113,7 +115,7 @@ class ClaudeService:
         For each segment, provide:
         1. Creative, memorable segment name
         2. Key characteristics (3-5 bullet points)
-        3. Size estimation (% of TAM and approximate numbers)
+        3. Size estimation (% of TAM and approximate market value in USD)
         4. Primary pain points (3-4 points)
         5. Buying triggers (3-4 points)
         6. Preferred communication channels
@@ -121,13 +123,15 @@ class ClaudeService:
         8. Specific use cases (3-4 practical applications)
         9. Role-specific pain points (if B2B, map pain points to specific roles)
         
+        IMPORTANT: All monetary values must be in USD. Convert from other currencies if necessary.
+        
         Format as JSON array of segments:
         [
             {{
                 "name": "Segment Name",
                 "characteristics": ["char1", "char2", "char3"],
                 "size_percentage": 25.0,
-                "size_estimation": "Detailed size description",
+                "size_estimation": "Detailed size description with USD values (e.g., $X billion USD market opportunity)",
                 "pain_points": ["pain1", "pain2", "pain3"],
                 "buying_triggers": ["trigger1", "trigger2", "trigger3"],
                 "preferred_channels": ["channel1", "channel2", "channel3"],
