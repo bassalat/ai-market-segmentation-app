@@ -74,12 +74,21 @@ def render_overview_section(market_analysis):
         # Ensure dollar signs have proper spacing
         tam_text = re.sub(r'\$\s*(\d)', r'$\1', tam_text)
         
+        # Fix numbers with dollar signs in the middle (e.g., 4$5 million -> 45 million)
+        tam_text = re.sub(r'(\d+)\$(\d+)', r'\1\2', tam_text)
+        
         # Add USD to billion/million/trillion amounts that don't have currency
         # Match: number + billion/million/trillion (without preceding $ or USD)
         tam_text = re.sub(r'(?<![$$USD\s])(\d+\.?\d*)\s*(billion|million|trillion)', r'$\1 \2 USD', tam_text, flags=re.IGNORECASE)
         
         # Clean up any duplicate spaces
         tam_text = re.sub(r'\s+', ' ', tam_text)
+        
+        # Remove any markdown formatting (bold, italic) to make text uniform
+        tam_text = re.sub(r'\*\*([^*]+)\*\*', r'\1', tam_text)  # Remove bold **text**
+        tam_text = re.sub(r'\*([^*]+)\*', r'\1', tam_text)      # Remove italic *text*
+        tam_text = re.sub(r'__([^_]+)__', r'\1', tam_text)      # Remove bold __text__
+        tam_text = re.sub(r'_([^_]+)_', r'\1', tam_text)        # Remove italic _text_
         
         st.info(tam_text)
         
