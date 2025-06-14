@@ -18,6 +18,8 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# Version: 1.1.0 - Fixed matplotlib dependency issue
+
 # Custom CSS for styling
 st.markdown("""
 <style>
