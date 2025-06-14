@@ -36,11 +36,24 @@ def render_overview_section(market_analysis):
         st.markdown("#### Total Addressable Market")
         # Format TAM text with proper spacing
         tam_text = market_analysis.total_addressable_market
-        # Add spaces before currency symbols and after numbers
         import re
-        tam_text = re.sub(r'(\d)([A-Za-z\$])', r'\1 \2', tam_text)
-        tam_text = re.sub(r'([a-z])(\d)', r'\1 \2', tam_text)
-        tam_text = re.sub(r'(\$)(\d)', r'\1 \2', tam_text)
+        
+        # Fix common formatting issues
+        # Add space between number and 'billion'/'million'/'trillion'
+        tam_text = re.sub(r'(\d)(billion|million|trillion)', r'\1 \2', tam_text, flags=re.IGNORECASE)
+        
+        # Add space between 'in' and year
+        tam_text = re.sub(r'(billion|million|trillion)in(\d{4})', r'\1 in \2', tam_text, flags=re.IGNORECASE)
+        
+        # Fix comma spacing issues
+        tam_text = re.sub(r',([^ ])', r', \1', tam_text)
+        
+        # Ensure dollar signs have proper spacing (but don't duplicate)
+        tam_text = re.sub(r'\$\s*(\d)', r'$\1', tam_text)
+        
+        # Clean up any duplicate spaces
+        tam_text = re.sub(r'\s+', ' ', tam_text)
+        
         st.info(tam_text)
         
         st.markdown("#### Key Market Insights")
