@@ -34,7 +34,14 @@ def render_overview_section(market_analysis):
     
     with col1:
         st.markdown("#### Total Addressable Market")
-        st.info(market_analysis.total_addressable_market)
+        # Format TAM text with proper spacing
+        tam_text = market_analysis.total_addressable_market
+        # Add spaces before currency symbols and after numbers
+        import re
+        tam_text = re.sub(r'(\d)([A-Za-z\$])', r'\1 \2', tam_text)
+        tam_text = re.sub(r'([a-z])(\d)', r'\1 \2', tam_text)
+        tam_text = re.sub(r'(\$)(\d)', r'\1 \2', tam_text)
+        st.info(tam_text)
         
         st.markdown("#### Key Market Insights")
         for i, insight in enumerate(market_analysis.key_insights, 1):
