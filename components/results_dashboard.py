@@ -87,47 +87,84 @@ def render_overview_section(market_analysis):
         if customer_match:
             tam_metrics['customer_count'] = f"{customer_match.group(1)} {customer_match.group(2) or ''} customers"
         
-        # Display TAM metrics in elegant boxes
-        if tam_metrics:
-            # Create metric columns based on available data
-            metric_cols = st.columns(len(tam_metrics))
-            
-            icons = {
-                'current_size': '📊',
-                'projected_size': '📈',
-                'projected_year': '📅',
-                'segment_size': '🎯',
-                'customer_count': '👥'
-            }
-            
-            labels = {
-                'current_size': 'Current Market',
-                'projected_size': 'Projected Market',
-                'projected_year': 'Target Year',
-                'segment_size': 'Target Segment',
-                'customer_count': 'Potential Customers'
-            }
-            
-            for idx, (key, value) in enumerate(tam_metrics.items()):
-                with metric_cols[idx]:
-                    st.markdown(f"""
-                    <div style="
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        padding: 1.5rem;
-                        border-radius: 10px;
-                        color: white;
-                        text-align: center;
-                        height: 120px;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                    ">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">{icons.get(key, '📊')}</div>
-                        <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.3rem;">{labels.get(key, 'Metric')}</div>
-                        <div style="font-size: 1.1rem; font-weight: bold;">{value}</div>
+        # Extract current market and projected values
+        current_market_value = tam_metrics.get('current_size', 'Data not available')
+        projected_market_value = tam_metrics.get('projected_size', 'Data not available')
+        projected_year = tam_metrics.get('projected_year', '2029')
+        
+        # Calculate growth if both values are available
+        growth_subtext = "Expected market growth"
+        if current_market_value != 'Data not available' and projected_market_value != 'Data not available':
+            # Try to extract numeric values for growth calculation
+            current_num = re.search(r'(\d+\.?\d*)', current_market_value)
+            projected_num = re.search(r'(\d+\.?\d*)', projected_market_value)
+            if current_num and projected_num:
+                current_val = float(current_num.group(1))
+                projected_val = float(projected_num.group(1))
+                growth_percent = ((projected_val - current_val) / current_val) * 100
+                growth_subtext = f"{growth_percent:.1f}% projected growth"
+        
+        # Create 2-box horizontal layout
+        box_col1, box_col2 = st.columns(2)
+        
+        # Box 1 - Current Market
+        with box_col1:
+            st.markdown(f"""
+            <div style="
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 2rem;
+                border-radius: 12px;
+                color: white;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                border: 1px solid rgba(255,255,255,0.1);
+                height: 140px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            ">
+                <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                    <div style="margin-right: 10px;">
+                        <!-- Bar chart icon SVG -->
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                            <rect x="3" y="16" width="4" height="5" rx="1"/>
+                            <rect x="10" y="12" width="4" height="9" rx="1"/>
+                            <rect x="17" y="8" width="4" height="13" rx="1"/>
+                        </svg>
                     </div>
-                    """, unsafe_allow_html=True)
+                    <h3 style="margin: 0; font-size: 1.2rem; font-weight: 600;">Current Market</h3>
+                </div>
+                <div style="font-size: 1.8rem; font-weight: bold; margin: 0;">
+                    {current_market_value}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Box 2 - 2029 Projection
+        with box_col2:
+            st.markdown(f"""
+            <div style="
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                padding: 2rem;
+                border-radius: 12px;
+                color: white;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                border: 1px solid rgba(255,255,255,0.1);
+                height: 140px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            ">
+                <div style="margin-bottom: 1rem;">
+                    <h3 style="margin: 0; font-size: 1.2rem; font-weight: 600;">{projected_year} Projection</h3>
+                </div>
+                <div style="font-size: 1.8rem; font-weight: bold; margin-bottom: 0.5rem;">
+                    {projected_market_value}
+                </div>
+                <div style="font-size: 0.9rem; opacity: 0.9; margin: 0;">
+                    {growth_subtext}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
         
         # Show full TAM description in an expander
         with st.expander("📝 Full Market Analysis", expanded=False):
