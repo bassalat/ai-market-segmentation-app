@@ -166,9 +166,6 @@ def render_overview_section(market_analysis):
             </div>
             """, unsafe_allow_html=True)
         
-        # Show full TAM description in an expander
-        with st.expander("📝 Full Market Analysis", expanded=False):
-            st.info(tam_text)
         
         st.markdown("#### Key Market Insights")
         for i, insight in enumerate(market_analysis.key_insights, 1):
