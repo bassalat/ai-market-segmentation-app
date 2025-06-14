@@ -34,63 +34,104 @@ def render_overview_section(market_analysis):
     
     with col1:
         st.markdown("#### Total Addressable Market")
-        # Format TAM text with proper spacing
+        
+        # Parse and format TAM text
         tam_text = market_analysis.total_addressable_market
         import re
         
-        # First, remove duplicated phrases (common Claude issue)
-        # Find and remove consecutive duplicate words/phrases
+        # Apply all the existing formatting fixes
         tam_text = re.sub(r'(\b\w+\b)(?:\s*\1)+', r'\1', tam_text)
-        
-        # Remove duplicate longer phrases (up to 50 chars)
         pattern = r'(.{10,50}?)\1+'
         tam_text = re.sub(pattern, r'\1', tam_text)
-        
-        # Fix specific formatting issues
-        # Add space between number and 'billion'/'million'/'trillion'
         tam_text = re.sub(r'(\d)(billion|million|trillion)', r'\1 \2', tam_text, flags=re.IGNORECASE)
-        
-        # Add space between 'in' and year
         tam_text = re.sub(r'(billion|million|trillion)in(\d{4})', r'\1 in \2', tam_text, flags=re.IGNORECASE)
-        
-        # Fix hyphenated words that should have spaces
         tam_text = re.sub(r'([a-z])−([a-z])', r'\1 - \2', tam_text)
-        
-        # Fix comma spacing issues
         tam_text = re.sub(r',([^ ])', r', \1', tam_text)
-        
-        # Fix merged words around 'targeting'
         tam_text = re.sub(r'billion,targeting', r'billion, targeting ', tam_text)
         tam_text = re.sub(r'targeting([a-z])', r'targeting \1', tam_text)
-        
-        # Fix income bracket formatting
         tam_text = re.sub(r'brackets(\$?\d+)', r'brackets \1', tam_text)
         tam_text = re.sub(r'(\d+K)-(\$\d+K)', r'\1-\2', tam_text)
-        
-        # Fix 'tech-savvy' and similar compound words
         tam_text = re.sub(r'tech−savvy', 'tech-savvy', tam_text)
         tam_text = re.sub(r'([a-z])−([a-z])', r'\1-\2', tam_text)
-        
-        # Ensure dollar signs have proper spacing
         tam_text = re.sub(r'\$\s*(\d)', r'$\1', tam_text)
-        
-        # Fix numbers with dollar signs in the middle (e.g., 4$5 million -> 45 million)
         tam_text = re.sub(r'(\d+)\$(\d+)', r'\1\2', tam_text)
-        
-        # Add USD to billion/million/trillion amounts that don't have currency
-        # Match: number + billion/million/trillion (without preceding $ or USD)
         tam_text = re.sub(r'(?<![$$USD\s])(\d+\.?\d*)\s*(billion|million|trillion)', r'$\1 \2 USD', tam_text, flags=re.IGNORECASE)
-        
-        # Clean up any duplicate spaces
         tam_text = re.sub(r'\s+', ' ', tam_text)
+        tam_text = re.sub(r'\*\*([^*]+)\*\*', r'\1', tam_text)
+        tam_text = re.sub(r'\*([^*]+)\*', r'\1', tam_text)
+        tam_text = re.sub(r'__([^_]+)__', r'\1', tam_text)
+        tam_text = re.sub(r'_([^_]+)_', r'\1', tam_text)
         
-        # Remove any markdown formatting (bold, italic) to make text uniform
-        tam_text = re.sub(r'\*\*([^*]+)\*\*', r'\1', tam_text)  # Remove bold **text**
-        tam_text = re.sub(r'\*([^*]+)\*', r'\1', tam_text)      # Remove italic *text*
-        tam_text = re.sub(r'__([^_]+)__', r'\1', tam_text)      # Remove bold __text__
-        tam_text = re.sub(r'_([^_]+)_', r'\1', tam_text)        # Remove italic _text_
+        # Extract key TAM metrics from the text
+        tam_metrics = {}
         
-        st.info(tam_text)
+        # Find current market size (look for patterns like "$X billion in 2024")
+        current_size_match = re.search(r'\$?([\d.]+)\s*(billion|million|trillion)(?:\s+USD)?(?:\s+in\s+)?(?:20\d{2})?', tam_text)
+        if current_size_match:
+            tam_metrics['current_size'] = f"${current_size_match.group(1)} {current_size_match.group(2)} USD"
+        
+        # Find projected market size (look for patterns with "by 2029" or "projected to reach")
+        projected_match = re.search(r'(?:projected to reach|reach|to)\s*\$?([\d.]+)\s*(billion|million|trillion)(?:\s+USD)?(?:\s+by\s+)?(20\d{2})?', tam_text)
+        if projected_match:
+            tam_metrics['projected_size'] = f"${projected_match.group(1)} {projected_match.group(2)} USD"
+            if projected_match.group(3):
+                tam_metrics['projected_year'] = projected_match.group(3)
+        
+        # Find target segment size
+        segment_match = re.search(r'(?:segment|focus|targeting).*?\$?([\d.]+)\s*(billion|million|trillion)', tam_text, re.IGNORECASE)
+        if segment_match:
+            tam_metrics['segment_size'] = f"${segment_match.group(1)} {segment_match.group(2)} USD"
+        
+        # Find customer numbers
+        customer_match = re.search(r'([\d.]+)\s*(million|thousand)?\s*(?:potential\s+)?customers', tam_text, re.IGNORECASE)
+        if customer_match:
+            tam_metrics['customer_count'] = f"{customer_match.group(1)} {customer_match.group(2) or ''} customers"
+        
+        # Display TAM metrics in elegant boxes
+        if tam_metrics:
+            # Create metric columns based on available data
+            metric_cols = st.columns(len(tam_metrics))
+            
+            icons = {
+                'current_size': '📊',
+                'projected_size': '📈',
+                'projected_year': '📅',
+                'segment_size': '🎯',
+                'customer_count': '👥'
+            }
+            
+            labels = {
+                'current_size': 'Current Market',
+                'projected_size': 'Projected Market',
+                'projected_year': 'Target Year',
+                'segment_size': 'Target Segment',
+                'customer_count': 'Potential Customers'
+            }
+            
+            for idx, (key, value) in enumerate(tam_metrics.items()):
+                with metric_cols[idx]:
+                    st.markdown(f"""
+                    <div style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        padding: 1.5rem;
+                        border-radius: 10px;
+                        color: white;
+                        text-align: center;
+                        height: 120px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    ">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">{icons.get(key, '📊')}</div>
+                        <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.3rem;">{labels.get(key, 'Metric')}</div>
+                        <div style="font-size: 1.1rem; font-weight: bold;">{value}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        
+        # Show full TAM description in an expander
+        with st.expander("📝 Full Market Analysis", expanded=False):
+            st.info(tam_text)
         
         st.markdown("#### Key Market Insights")
         for i, insight in enumerate(market_analysis.key_insights, 1):
