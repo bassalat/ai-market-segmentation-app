@@ -38,18 +38,45 @@ def render_overview_section(market_analysis):
         tam_text = market_analysis.total_addressable_market
         import re
         
-        # Fix common formatting issues
+        # First, remove duplicated phrases (common Claude issue)
+        # Find and remove consecutive duplicate words/phrases
+        tam_text = re.sub(r'(\b\w+\b)(?:\s*\1)+', r'\1', tam_text)
+        
+        # Remove duplicate longer phrases (up to 50 chars)
+        pattern = r'(.{10,50}?)\1+'
+        tam_text = re.sub(pattern, r'\1', tam_text)
+        
+        # Fix specific formatting issues
         # Add space between number and 'billion'/'million'/'trillion'
         tam_text = re.sub(r'(\d)(billion|million|trillion)', r'\1 \2', tam_text, flags=re.IGNORECASE)
         
         # Add space between 'in' and year
         tam_text = re.sub(r'(billion|million|trillion)in(\d{4})', r'\1 in \2', tam_text, flags=re.IGNORECASE)
         
+        # Fix hyphenated words that should have spaces
+        tam_text = re.sub(r'([a-z])−([a-z])', r'\1 - \2', tam_text)
+        
         # Fix comma spacing issues
         tam_text = re.sub(r',([^ ])', r', \1', tam_text)
         
-        # Ensure dollar signs have proper spacing (but don't duplicate)
+        # Fix merged words around 'targeting'
+        tam_text = re.sub(r'billion,targeting', r'billion, targeting ', tam_text)
+        tam_text = re.sub(r'targeting([a-z])', r'targeting \1', tam_text)
+        
+        # Fix income bracket formatting
+        tam_text = re.sub(r'brackets(\$?\d+)', r'brackets \1', tam_text)
+        tam_text = re.sub(r'(\d+K)-(\$\d+K)', r'\1-\2', tam_text)
+        
+        # Fix 'tech-savvy' and similar compound words
+        tam_text = re.sub(r'tech−savvy', 'tech-savvy', tam_text)
+        tam_text = re.sub(r'([a-z])−([a-z])', r'\1-\2', tam_text)
+        
+        # Ensure dollar signs have proper spacing
         tam_text = re.sub(r'\$\s*(\d)', r'$\1', tam_text)
+        
+        # Add USD to billion/million/trillion amounts that don't have currency
+        # Match: number + billion/million/trillion (without preceding $ or USD)
+        tam_text = re.sub(r'(?<![$$USD\s])(\d+\.?\d*)\s*(billion|million|trillion)', r'$\1 \2 USD', tam_text, flags=re.IGNORECASE)
         
         # Clean up any duplicate spaces
         tam_text = re.sub(r'\s+', ' ', tam_text)
