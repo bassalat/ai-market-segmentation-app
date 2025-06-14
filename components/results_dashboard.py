@@ -259,43 +259,137 @@ def render_implementation_section(results: SegmentationResults):
     if len(results.segments) > 1:
         st.markdown("#### 🎯 Segment Priority Matrix")
         
-        # Create a simple priority matrix based on size and ease of targeting
+        # Create a priority matrix based on size and accessibility
         segment_data = []
-        for segment in results.segments:
-            # Simple scoring based on size and number of characteristics
-            ease_score = max(1, 10 - len(segment.characteristics))  # Fewer characteristics = easier to target
+        for i, segment in enumerate(results.segments):
+            # Calculate accessibility score based on multiple factors
+            # Higher score = easier to target
+            accessibility_factors = []
+            
+            # 1. Fewer preferred channels = more focused, easier to target (0-3 points)
+            channel_score = 3 - min(3, len(segment.preferred_channels) - 1)
+            accessibility_factors.append(channel_score)
+            
+            # 2. Clear pain points = easier to message (0-3 points)
+            pain_point_score = min(3, len(segment.pain_points))
+            accessibility_factors.append(pain_point_score)
+            
+            # 3. Defined use cases = clearer value prop (0-2 points)
+            if hasattr(segment, 'use_cases'):
+                use_case_score = min(2, len(segment.use_cases))
+            else:
+                use_case_score = 1
+            accessibility_factors.append(use_case_score)
+            
+            # 4. Specific demographics = easier to identify (0-2 points)
+            demo_score = min(2, len(segment.demographics))
+            accessibility_factors.append(demo_score)
+            
+            # Calculate total accessibility score (1-10 scale)
+            total_score = sum(accessibility_factors)
+            accessibility_score = max(1, min(10, total_score))
+            
             segment_data.append({
                 'Segment': segment.name,
                 'Market Size': segment.size_percentage,
-                'Ease of Targeting': ease_score,
-                'Size Description': f"{segment.size_percentage}% of market"
+                'Accessibility Score': accessibility_score,
+                'Size Description': f"{segment.size_percentage}% of market",
+                'Channels': len(segment.preferred_channels),
+                'Pain Points': len(segment.pain_points)
             })
         
         df = pd.DataFrame(segment_data)
         
         fig_scatter = px.scatter(
             df,
-            x='Ease of Targeting',
+            x='Accessibility Score',
             y='Market Size',
             size='Market Size',
             hover_name='Segment',
-            hover_data=['Size Description'],
-            title="Segment Priority Matrix (Size vs. Ease of Targeting)",
-            labels={'Ease of Targeting': 'Ease of Targeting (1-10)', 'Market Size': 'Market Size (%)'}
+            hover_data=['Size Description', 'Channels', 'Pain Points'],
+            title="Segment Priority Matrix (Market Size vs. Accessibility)",
+            labels={'Accessibility Score': 'Accessibility Score (1-10)', 'Market Size': 'Market Size (%)'},
+            color_discrete_sequence=['#667EEA']
         )
         
+        # Calculate quadrant dividers
+        x_median = 5.5  # Middle of 1-10 scale
+        y_median = df['Market Size'].median()
+        
         # Add quadrant lines
-        fig_scatter.add_hline(y=df['Market Size'].median(), line_dash="dash", line_color="gray", opacity=0.5)
-        fig_scatter.add_vline(x=df['Ease of Targeting'].median(), line_dash="dash", line_color="gray", opacity=0.5)
+        fig_scatter.add_hline(y=y_median, line_dash="dash", line_color="gray", opacity=0.5)
+        fig_scatter.add_vline(x=x_median, line_dash="dash", line_color="gray", opacity=0.5)
         
-        # Add quadrant labels
-        fig_scatter.add_annotation(x=8, y=df['Market Size'].max()*0.9, text="High Priority", showarrow=False, font=dict(size=12, color="green"))
-        fig_scatter.add_annotation(x=2, y=df['Market Size'].max()*0.9, text="Long-term", showarrow=False, font=dict(size=12, color="orange"))
-        fig_scatter.add_annotation(x=8, y=df['Market Size'].min()*1.1, text="Quick Wins", showarrow=False, font=dict(size=12, color="blue"))
-        fig_scatter.add_annotation(x=2, y=df['Market Size'].min()*1.1, text="Low Priority", showarrow=False, font=dict(size=12, color="red"))
+        # Calculate label positions
+        x_max = 10
+        x_min = 1
+        y_max = df['Market Size'].max()
+        y_min = df['Market Size'].min()
         
-        fig_scatter.update_layout(height=500)
+        # Add quadrant labels with better positioning
+        fig_scatter.add_annotation(
+            x=x_max - 1.5, 
+            y=y_max - (y_max - y_median) * 0.1, 
+            text="🎯 High Priority",
+            showarrow=False, 
+            font=dict(size=14, color="green", weight="bold"),
+            bgcolor="rgba(255,255,255,0.8)"
+        )
+        fig_scatter.add_annotation(
+            x=x_min + 1.5, 
+            y=y_max - (y_max - y_median) * 0.1, 
+            text="📈 Build Market",
+            showarrow=False, 
+            font=dict(size=14, color="orange", weight="bold"),
+            bgcolor="rgba(255,255,255,0.8)"
+        )
+        fig_scatter.add_annotation(
+            x=x_max - 1.5, 
+            y=y_min + (y_median - y_min) * 0.1, 
+            text="⚡ Quick Wins",
+            showarrow=False, 
+            font=dict(size=14, color="blue", weight="bold"),
+            bgcolor="rgba(255,255,255,0.8)"
+        )
+        fig_scatter.add_annotation(
+            x=x_min + 1.5, 
+            y=y_min + (y_median - y_min) * 0.1, 
+            text="🔍 Evaluate",
+            showarrow=False, 
+            font=dict(size=14, color="gray", weight="bold"),
+            bgcolor="rgba(255,255,255,0.8)"
+        )
+        
+        # Update layout for better visualization
+        fig_scatter.update_layout(
+            height=500,
+            xaxis=dict(range=[0, 11], dtick=2),
+            yaxis=dict(range=[-5, max(100, y_max + 10)]),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
+        )
+        
+        # Add grid
+        fig_scatter.update_xaxes(showgrid=True, gridwidth=1, gridcolor='rgba(128,128,128,0.2)')
+        fig_scatter.update_yaxes(showgrid=True, gridwidth=1, gridcolor='rgba(128,128,128,0.2)')
+        
         st.plotly_chart(fig_scatter, use_container_width=True)
+        
+        # Add explanation
+        with st.expander("📊 How to read this matrix"):
+            st.markdown("""
+            **Accessibility Score** is calculated based on:
+            - 🎯 **Channel Focus**: Fewer, more focused channels = higher score
+            - 💡 **Clear Pain Points**: Well-defined pain points = higher score
+            - 📋 **Use Cases**: Specific use cases = higher score
+            - 👥 **Target Definition**: Clear demographics = higher score
+            
+            **Quadrants**:
+            - **🎯 High Priority**: Large market + Easy to reach → Focus here first
+            - **⚡ Quick Wins**: Small market + Easy to reach → Test and iterate quickly
+            - **📈 Build Market**: Large market + Hard to reach → Long-term investment
+            - **🔍 Evaluate**: Small market + Hard to reach → Consider if worth pursuing
+            """)
     
     # Action buttons
     st.markdown("---")
