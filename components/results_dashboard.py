@@ -444,15 +444,14 @@ def render_implementation_section(results: SegmentationResults):
                               'Market Attractiveness', 'Accessibility']
         priority_df = priority_df.sort_values('Rank')
         
-        # Style the dataframe
-        styled_df = priority_df.style.format({
-            'Market Size (%)': '{:.1f}%',
-            'Priority Score': '{:.1f}',
-            'Market Attractiveness': '{:.1f}',
-            'Accessibility': '{:.1f}'
-        }).background_gradient(subset=['Priority Score'], cmap='Greens')
+        # Format the dataframe without background gradient to avoid matplotlib dependency
+        formatted_df = priority_df.copy()
+        formatted_df['Market Size (%)'] = formatted_df['Market Size (%)'].apply(lambda x: f'{x:.1f}%')
+        formatted_df['Priority Score'] = formatted_df['Priority Score'].apply(lambda x: f'{x:.1f}')
+        formatted_df['Market Attractiveness'] = formatted_df['Market Attractiveness'].apply(lambda x: f'{x:.1f}')
+        formatted_df['Accessibility'] = formatted_df['Accessibility'].apply(lambda x: f'{x:.1f}')
         
-        st.dataframe(styled_df, hide_index=True, use_container_width=True)
+        st.dataframe(formatted_df, hide_index=True, use_container_width=True)
         
         # Add methodology explanation
         with st.expander("📈 How Priority Scores are Calculated"):
