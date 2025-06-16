@@ -30,3 +30,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Documentation files (local only)
+chat_log.md
+CLAUDE.md
