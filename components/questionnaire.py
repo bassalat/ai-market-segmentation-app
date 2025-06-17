@@ -179,8 +179,15 @@ def render_b2b_questions():
         geographic_focus = st.multiselect(
             "Geographic Focus",
             options=[
-                "North America", "United States", "Canada", "Europe", "Asia Pacific",
-                "Latin America", "Middle East", "Africa", "Global"
+                # Regions
+                "Global", "North America", "Europe", "Asia Pacific", "Latin America", "Middle East", "Africa",
+                # Major Countries (alphabetical)
+                "Australia", "Austria", "Belgium", "Brazil", "Canada", "China", "Denmark", 
+                "Finland", "France", "Germany", "India", "Indonesia", "Ireland", "Israel",
+                "Italy", "Japan", "Malaysia", "Mexico", "Netherlands", "New Zealand", 
+                "Norway", "Philippines", "Poland", "Portugal", "Singapore", "South Africa",
+                "South Korea", "Spain", "Sweden", "Switzerland", "Thailand", "Turkey",
+                "United Arab Emirates", "United Kingdom", "United States", "Vietnam"
             ],
             default=st.session_state.form_data.get('geographic_focus', ["United States"])
         )
