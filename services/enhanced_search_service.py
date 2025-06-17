@@ -719,19 +719,53 @@ class EnhancedSearchService:
             # Extract market values
             text = f"{item.get('title', '')} {item.get('snippet', '')}"
             
-            # Look for market size mentions
-            market_pattern = r'\$?([\d,]+\.?\d*)\s*(billion|million|trillion)'
-            matches = re.findall(market_pattern, text, re.IGNORECASE)
+            # Enhanced pattern to capture more context
+            market_patterns = [
+                # Pattern with "market size" context
+                r'(?:market size|market value|market worth|TAM|total addressable market).*?\$?([\d,]+\.?\d*)\s*(billion|million|trillion|B|M)',
+                # Pattern with "valued at" context
+                r'(?:valued at|worth|reached|estimated at).*?\$?([\d,]+\.?\d*)\s*(billion|million|trillion|B|M)',
+                # Pattern with industry/sector context
+                r'(?:industry|sector|market).*?(?:is|was|reached).*?\$?([\d,]+\.?\d*)\s*(billion|million|trillion|B|M)'
+            ]
             
-            for match in matches:
-                value, unit = match
-                normalized_value = self._normalize_market_value(value, unit)
-                market_values.append({
-                    'value': normalized_value,
-                    'raw': f"${value} {unit}",
-                    'source': item.get('source', ''),
-                    'context': item.get('snippet', '')[:200]
-                })
+            for pattern in market_patterns:
+                matches = re.findall(pattern, text, re.IGNORECASE)
+                
+                for match in matches:
+                    value, unit = match
+                    numeric_value = float(value.replace(',', ''))
+                    
+                    # Validate the market size is reasonable
+                    normalized_value = self._normalize_market_value(value, unit)
+                    
+                    # Sanity check - recruitment tech shouldn't be trillions
+                    if normalized_value > 5_000_000:  # > $5 trillion is suspicious
+                        continue
+                    
+                    # Additional context validation
+                    context_snippet = item.get('snippet', '')[:300].lower()
+                    
+                    # Dynamic relevance keywords based on industry
+                    query_text = item.get('query', '').lower()
+                    relevance_keywords = self._get_industry_keywords(query_text)
+                    
+                    # Check if the value is actually about the relevant industry
+                    is_relevant = any(keyword in context_snippet for keyword in relevance_keywords)
+                    
+                    # If no relevance keywords found, check the query that found this
+                    if not is_relevant and 'query' in item:
+                        query_text = item.get('query', '').lower()
+                        is_relevant = any(keyword in query_text for keyword in relevance_keywords)
+                    
+                    market_values.append({
+                        'value': normalized_value,
+                        'raw': f"${value} {unit}",
+                        'source': item.get('source', ''),
+                        'context': context_snippet,
+                        'is_relevant': is_relevant,
+                        'confidence': self._calculate_value_confidence(numeric_value, unit, context_snippet)
+                    })
             
             # Look for growth rates
             growth_pattern = r'([\d,]+\.?\d*)\s*%\s*(CAGR|growth|increase)'
@@ -739,32 +773,106 @@ class EnhancedSearchService:
             
             for match in growth_matches:
                 rate, type = match
+                rate_value = float(rate.replace(',', ''))
+                
+                # Sanity check for growth rates
+                if rate_value > 100:  # > 100% annual growth is suspicious
+                    continue
+                    
                 growth_rates.append({
-                    'rate': float(rate.replace(',', '')),
+                    'rate': rate_value,
                     'type': type,
                     'source': item.get('source', ''),
                     'context': item.get('snippet', '')[:200]
                 })
         
-        # Calculate consensus values
-        if market_values:
-            market_values.sort(key=lambda x: x['value'], reverse=True)
-            median_value = market_values[len(market_values)//2]['value'] if len(market_values) > 2 else market_values[0]['value']
+        # Filter and prioritize relevant market values
+        relevant_values = [v for v in market_values if v.get('is_relevant', False)]
+        if not relevant_values:
+            # If no relevant values found, use all but with lower confidence
+            relevant_values = market_values
+        
+        # Sort by confidence and value
+        relevant_values.sort(key=lambda x: (x.get('confidence', 0), x['value']), reverse=True)
+        
+        # Calculate consensus values with preference for smaller, more realistic values
+        if relevant_values:
+            # For market size, prefer values in reasonable range
+            reasonable_values = [v for v in relevant_values if 10 <= v['value'] <= 100_000]  # $10M to $100B
+            
+            if reasonable_values:
+                # Use median of reasonable values
+                median_value = reasonable_values[len(reasonable_values)//2]['value']
+            else:
+                # Fall back to smallest value if all seem too large
+                median_value = min(relevant_values, key=lambda x: x['value'])['value']
         else:
             median_value = None
         
         if growth_rates:
-            avg_growth = sum(g['rate'] for g in growth_rates) / len(growth_rates)
+            # Filter out extreme growth rates
+            reasonable_growth = [g for g in growth_rates if 0 < g['rate'] <= 50]
+            if reasonable_growth:
+                avg_growth = sum(g['rate'] for g in reasonable_growth) / len(reasonable_growth)
+            else:
+                avg_growth = sum(g['rate'] for g in growth_rates) / len(growth_rates)
         else:
             avg_growth = None
         
         return {
             'current_market_size': median_value,
-            'market_values_found': market_values[:5],  # Top 5 values
+            'market_values_found': relevant_values[:5],  # Top 5 values
             'growth_rate': avg_growth,
             'growth_rates_found': growth_rates[:5],
-            'data_points': len(market_values) + len(growth_rates)
+            'data_points': len(market_values) + len(growth_rates),
+            'confidence_level': self._assess_market_data_confidence(relevant_values, growth_rates)
         }
+    
+    def _calculate_value_confidence(self, numeric_value: float, unit: str, context: str) -> float:
+        """Calculate confidence score for a market value"""
+        
+        confidence = 0.5  # Base confidence
+        
+        # Check for specific market size indicators in context
+        if any(term in context for term in ['market size', 'market value', 'TAM', 'total addressable']):
+            confidence += 0.2
+        
+        # Check for year mentions (more recent = higher confidence)
+        import re
+        year_matches = re.findall(r'20[2-9]\d', context)
+        if year_matches:
+            latest_year = max(int(year) for year in year_matches)
+            if latest_year >= 2023:
+                confidence += 0.15
+            elif latest_year >= 2021:
+                confidence += 0.1
+        
+        # Reasonable value ranges get higher confidence
+        unit_lower = unit.lower()
+        if unit_lower in ['billion', 'b']:
+            if 0.1 <= numeric_value <= 100:  # $100M to $100B is reasonable for most tech markets
+                confidence += 0.15
+        elif unit_lower in ['million', 'm']:
+            if 100 <= numeric_value <= 10000:  # $100M to $10B
+                confidence += 0.15
+        
+        return min(1.0, confidence)
+    
+    def _assess_market_data_confidence(self, market_values: List[Dict], growth_rates: List[Dict]) -> str:
+        """Assess overall confidence in market data"""
+        
+        if not market_values:
+            return "Low"
+        
+        avg_confidence = sum(v.get('confidence', 0) for v in market_values[:3]) / min(3, len(market_values))
+        relevant_count = sum(1 for v in market_values if v.get('is_relevant', False))
+        
+        if avg_confidence >= 0.7 and relevant_count >= 2:
+            return "High"
+        elif avg_confidence >= 0.5 or relevant_count >= 1:
+            return "Medium"
+        else:
+            return "Low"
     
     def _normalize_market_value(self, value: str, unit: str) -> float:
         """Normalize market values to millions"""
@@ -772,12 +880,73 @@ class EnhancedSearchService:
         numeric_value = float(value.replace(',', ''))
         
         unit_lower = unit.lower()
-        if 'trillion' in unit_lower:
+        if unit_lower in ['trillion', 't']:
             return numeric_value * 1_000_000
-        elif 'billion' in unit_lower:
+        elif unit_lower in ['billion', 'b']:
             return numeric_value * 1_000
-        else:  # million
+        elif unit_lower in ['million', 'm']:
             return numeric_value
+        else:
+            # If no unit specified, try to infer from value magnitude
+            if numeric_value > 1000:
+                return numeric_value / 1_000  # Assume thousands, convert to millions
+            else:
+                return numeric_value  # Assume already in millions
+    
+    def _get_industry_keywords(self, query_text: str) -> List[str]:
+        """Get relevant keywords based on the industry being searched"""
+        
+        query_lower = query_text.lower()
+        
+        # Common industry keyword mappings
+        industry_keywords = {
+            'recruitment': ['recruitment', 'recruiting', 'hiring', 'hr tech', 'talent', 'staffing', 'human resource', 'applicant tracking', 'ats'],
+            'saas': ['saas', 'software as a service', 'cloud software', 'subscription software', 'enterprise software'],
+            'fintech': ['fintech', 'financial technology', 'payment', 'banking', 'lending', 'insurance tech', 'insurtech'],
+            'healthcare': ['healthcare', 'health tech', 'medical', 'hospital', 'clinical', 'patient', 'telemedicine', 'digital health'],
+            'ecommerce': ['ecommerce', 'e-commerce', 'online retail', 'marketplace', 'online shopping', 'digital commerce'],
+            'edtech': ['edtech', 'education technology', 'learning', 'training', 'online education', 'e-learning'],
+            'martech': ['martech', 'marketing technology', 'advertising', 'marketing automation', 'crm', 'customer data'],
+            'proptech': ['proptech', 'property technology', 'real estate tech', 'property management', 'realestate'],
+            'agtech': ['agtech', 'agriculture technology', 'farming', 'agricultural', 'agritech'],
+            'logistics': ['logistics', 'supply chain', 'shipping', 'freight', 'delivery', 'transportation tech'],
+            'cybersecurity': ['cybersecurity', 'security software', 'data protection', 'network security', 'infosec'],
+            'ai': ['artificial intelligence', 'machine learning', 'deep learning', 'ai platform', 'ml ops'],
+            'blockchain': ['blockchain', 'crypto', 'cryptocurrency', 'defi', 'web3', 'distributed ledger'],
+            'iot': ['iot', 'internet of things', 'connected devices', 'smart home', 'industrial iot', 'sensors']
+        }
+        
+        # Find matching industry
+        for industry, keywords in industry_keywords.items():
+            if any(keyword in query_lower for keyword in keywords[:3]):  # Check first few keywords
+                return keywords
+        
+        # If no specific industry match, extract potential keywords from query
+        # This handles cases where the industry name is directly in the query
+        words = query_lower.split()
+        potential_keywords = []
+        
+        # Look for industry/market/tech patterns
+        for i, word in enumerate(words):
+            if word in ['industry', 'market', 'tech', 'technology', 'software', 'platform']:
+                # Get the word before if it exists
+                if i > 0:
+                    potential_keywords.append(words[i-1])
+                    potential_keywords.append(f"{words[i-1]} {word}")
+            
+            # Also include significant words (length > 4, not common words)
+            if len(word) > 4 and word not in ['market', 'size', 'trends', 'analysis', 'growth']:
+                potential_keywords.append(word)
+        
+        # If we found potential keywords, use them
+        if potential_keywords:
+            return potential_keywords[:5]
+        
+        # Fallback: extract the most significant words from the query
+        significant_words = [w for w in words if len(w) > 3 and w not in 
+                            ['market', 'size', 'trends', 'analysis', 'growth', 'total', 'addressable']]
+        
+        return significant_words[:5] if significant_words else ['technology', 'software']
     
     def _extract_growth_factors(self, trends_data: List[Dict[str, Any]]) -> List[str]:
         """Extract key growth factors from trends data"""

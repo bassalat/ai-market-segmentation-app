@@ -173,14 +173,29 @@ class SegmentationEngine:
         market_size_data = market_insights.get('market_size', {})
         if market_size_data.get('current_market_size'):
             formatted_report.append(f"MARKET SIZE ANALYSIS:")
-            formatted_report.append(f"- Current Market Size: ${market_size_data['current_market_size']:.1f}M")
+            
+            # Format the market size properly
+            market_size = market_size_data['current_market_size']
+            if market_size >= 1_000:  # If over $1B (1000M), show as billions
+                formatted_report.append(f"- Current Market Size: ${market_size/1_000:.1f}B")
+            else:
+                formatted_report.append(f"- Current Market Size: ${market_size:.1f}M")
+            
             if market_size_data.get('growth_rate'):
                 formatted_report.append(f"- Growth Rate: {market_size_data['growth_rate']:.1f}% CAGR")
             
+            # Add confidence level
+            confidence = market_size_data.get('confidence_level', 'Unknown')
+            formatted_report.append(f"- Data Confidence: {confidence}")
+            
             # Add supporting data points
             market_values = market_size_data.get('market_values_found', [])
-            for value in market_values[:3]:
-                formatted_report.append(f"  • {value['raw']} ({value['source']})")
+            if market_values:
+                formatted_report.append(f"- Supporting Data Points:")
+                for value in market_values[:3]:
+                    relevance = "✓" if value.get('is_relevant', False) else "?"
+                    confidence_score = value.get('confidence', 0)
+                    formatted_report.append(f"  {relevance} {value['raw']} ({value['source']}) [Conf: {confidence_score:.2f}]")
         
         # Key Statistics
         if raw_results.get('key_statistics'):
