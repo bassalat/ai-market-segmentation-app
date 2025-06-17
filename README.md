@@ -69,10 +69,10 @@ market_segmentation_app/
 │   └── export_handler.py          # PDF generation and export
 ├── services/
 │   ├── claude_service.py          # Claude API integration
-│   ├── search_service.py          # Basic web search (DuckDuckGo)
-│   ├── enhanced_search_service.py # Advanced search with Serper.dev
-│   ├── web_scraper.py            # Content extraction from URLs
-│   └── segmentation_engine.py     # Core segmentation logic
+│   ├── enhanced_search_service.py # Primary search engine (Serper.dev)
+│   ├── web_scraper.py            # Intelligent content extraction
+│   ├── search_service.py          # Fallback search (DuckDuckGo)
+│   └── segmentation_engine.py     # Core processing pipeline
 └── models/
     ├── user_inputs.py             # Input validation models
     └── segment_models.py          # Data models for segments
@@ -96,11 +96,13 @@ market_segmentation_app/
 ### Required:
 - **Anthropic API Key**: For Claude Sonnet 4 AI analysis
 
-### Optional (Recommended):
-- **Serper.dev API Key**: For enhanced search capabilities
-  - Provides 25+ searches vs 3 basic searches
-  - Enables web scraping for deep content analysis
+### Optional (Highly Recommended):
+- **Serper.dev API Key**: For enterprise-grade search capabilities
+  - **Primary search engine** when available
+  - Provides 25+ targeted searches vs 3 basic fallback searches
+  - Enables intelligent web scraping for deep content analysis
   - Improves data quality score by 15-20%
+  - **Without this key**: App falls back to basic DuckDuckGo search
 
 ## Features by Business Model
 
