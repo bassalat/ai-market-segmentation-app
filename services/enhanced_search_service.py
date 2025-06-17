@@ -7,7 +7,9 @@ import json
 import hashlib
 from collections import defaultdict
 import re
+from urllib.parse import urlparse
 from services.web_scraper import WebScraper
+from models.segment_models import DataSource, Citation, MarketDataPoint, SourceQuality, ContentType
 
 class EnhancedSearchService:
     def __init__(self, api_key: str):
@@ -16,6 +18,8 @@ class EnhancedSearchService:
         self.cache = {}
         self.cache_duration = timedelta(hours=24)
         self.web_scraper = WebScraper()
+        self.all_sources = []  # Track all sources for comprehensive bibliography
+        self.source_id_counter = 0
         
     async def deep_market_search(self, company_name: str, industry: str, business_model: str) -> Dict[str, Any]:
         """Perform comprehensive market research with multiple search types and layers"""
@@ -35,15 +39,21 @@ class EnhancedSearchService:
         # Phase 5: Extract key insights from both search and scraped data
         market_insights = self._extract_market_insights(enriched_data, scraped_content)
         
+        # Phase 6: Create comprehensive source bibliography
+        bibliography = self._create_research_bibliography()
+        
         return {
             "raw_results": enriched_data,
             "scraped_content": scraped_content,
             "market_insights": market_insights,
+            "research_sources": self.all_sources,
+            "bibliography": bibliography,
             "search_metadata": {
                 "total_queries": len(queries),
                 "scraped_pages": len(scraped_content),
                 "timestamp": datetime.now().isoformat(),
-                "data_sources": self._get_data_sources(all_results)
+                "data_sources": self._get_data_sources(all_results),
+                "source_quality_summary": self._get_source_quality_summary()
             }
         }
     
@@ -222,12 +232,17 @@ class EnhancedSearchService:
             # Extract organic results
             organic_results = result.get('organic', [])
             for item in organic_results[:10]:  # Top 10 results per query
+                
+                # Create comprehensive DataSource object for each result
+                data_source = self._create_data_source_from_result(item, query_metadata.get('q', ''))
+                
                 processed_item = {
                     'title': item.get('title', ''),
                     'snippet': item.get('snippet', ''),
                     'link': item.get('link', ''),
                     'source': self._extract_domain(item.get('link', '')),
                     'query': query_metadata.get('q', ''),
+                    'data_source': data_source,  # Add comprehensive source metadata
                     'relevance_score': self._calculate_relevance(item, query_metadata)
                 }
                 
@@ -1242,3 +1257,397 @@ class EnhancedSearchService:
             'data_coverage': coverage_level,
             'enhancement_boost': scraped_quality_boost
         }
+    
+    # ===== ENHANCED SOURCE TRACKING METHODS =====
+    
+    def _create_data_source_from_result(self, result: Dict[str, Any], query_context: str = "") -> DataSource:
+        """Create comprehensive DataSource object from search result"""
+        
+        self.source_id_counter += 1
+        url = result.get('link', '')
+        title = result.get('title', 'Untitled')
+        snippet = result.get('snippet', '')
+        
+        # Parse domain and determine source quality
+        domain = urlparse(url).netloc.lower() if url else ''
+        source_quality = self._determine_source_quality(domain, title, snippet)
+        content_type = self._determine_content_type(url, title, snippet)
+        
+        # Extract publication date if available
+        publication_date = self._extract_publication_date(result)
+        
+        # Calculate confidence and relevance scores
+        confidence_score = self._calculate_confidence_score(result, query_context)
+        relevance_score = self._calculate_relevance_score(result, query_context)
+        
+        # Determine domain authority (simplified scoring)
+        domain_authority = self._get_domain_authority(domain)
+        
+        # Extract organization/author info
+        author, organization = self._extract_author_info(result, domain)
+        
+        source = DataSource(
+            url=url,
+            title=title,
+            author=author,
+            organization=organization,
+            publication_date=publication_date,
+            domain_authority=domain_authority,
+            content_type=content_type,
+            source_quality=source_quality,
+            confidence_score=confidence_score,
+            relevance_score=relevance_score,
+            data_quality_rating=self._calculate_data_quality_rating(result, domain),
+            country_focus=self._detect_country_focus(snippet, title)
+        )
+        
+        # Add to master source list
+        self.all_sources.append(source)
+        
+        return source
+    
+    def _determine_source_quality(self, domain: str, title: str, snippet: str) -> SourceQuality:
+        """Determine source quality tier based on domain and content"""
+        
+        # Tier 1: Academic, Government, Major Research Firms
+        tier_1_domains = [
+            'edu', 'gov', 'gartner.com', 'mckinsey.com', 'bcg.com', 'bain.com',
+            'deloitte.com', 'pwc.com', 'kpmg.com', 'ey.com', 'forrester.com',
+            'idc.com', 'statista.com', 'census.gov', 'oecd.org', 'worldbank.org',
+            'imf.org', 'scholar.google.com', 'researchgate.net', 'nature.com',
+            'science.org', 'ieee.org', 'acm.org'
+        ]
+        
+        # Tier 2: Industry Reports, Major Publications
+        tier_2_domains = [
+            'bloomberg.com', 'reuters.com', 'wsj.com', 'ft.com', 'economist.com',
+            'hbr.org', 'mit.edu', 'stanford.edu', 'harvard.edu', 'techcrunch.com',
+            'venturebeat.com', 'crunchbase.com', 'pitchbook.com', 'cbinsights.com',
+            'grandviewresearch.com', 'marketsandmarkets.com', 'mordorintelligence.com'
+        ]
+        
+        # Tier 3: Company Blogs, Trade Publications
+        tier_3_domains = [
+            'medium.com', 'linkedin.com', 'inc.com', 'entrepreneur.com',
+            'fastcompany.com', 'wired.com', 'zdnet.com', 'computerworld.com'
+        ]
+        
+        # Check domain quality
+        for domain_check in tier_1_domains:
+            if domain_check in domain:
+                return SourceQuality.TIER_1
+        
+        for domain_check in tier_2_domains:
+            if domain_check in domain:
+                return SourceQuality.TIER_2
+        
+        for domain_check in tier_3_domains:
+            if domain_check in domain:
+                return SourceQuality.TIER_3
+        
+        # Check content indicators
+        academic_indicators = ['research', 'study', 'analysis', 'report', 'whitepaper']
+        if any(indicator in title.lower() or indicator in snippet.lower() 
+               for indicator in academic_indicators):
+            return SourceQuality.TIER_3
+        
+        return SourceQuality.TIER_4
+    
+    def _determine_content_type(self, url: str, title: str, snippet: str) -> ContentType:
+        """Determine content type based on URL and content indicators"""
+        
+        title_lower = title.lower()
+        snippet_lower = snippet.lower()
+        url_lower = url.lower() if url else ''
+        
+        # Check for academic papers
+        if any(indicator in title_lower for indicator in ['study', 'research', 'analysis']):
+            if any(domain in url_lower for domain in ['.edu', 'scholar', 'researchgate']):
+                return ContentType.ACADEMIC_PAPER
+        
+        # Check for industry reports
+        if any(indicator in title_lower for indicator in ['report', 'market size', 'industry analysis']):
+            return ContentType.INDUSTRY_REPORT
+        
+        # Check for financial reports
+        if any(indicator in title_lower for indicator in ['earnings', 'financial', 'quarterly', 'annual report']):
+            return ContentType.FINANCIAL_REPORT
+        
+        # Check for white papers
+        if 'whitepaper' in title_lower or 'white paper' in title_lower:
+            return ContentType.WHITE_PAPER
+        
+        # Check for press releases
+        if any(indicator in title_lower for indicator in ['announces', 'press release', 'launches']):
+            return ContentType.PRESS_RELEASE
+        
+        # Check for government data
+        if '.gov' in url_lower or 'government' in title_lower:
+            return ContentType.GOVERNMENT_DATA
+        
+        # Check for conference presentations
+        if any(indicator in title_lower for indicator in ['conference', 'presentation', 'summit']):
+            return ContentType.CONFERENCE_PRESENTATION
+        
+        return ContentType.NEWS_ARTICLE
+    
+    def _extract_publication_date(self, result: Dict[str, Any]) -> Optional[datetime]:
+        """Extract publication date from search result"""
+        
+        # Check for date in result metadata
+        if 'date' in result:
+            try:
+                return datetime.fromisoformat(result['date'].replace('Z', '+00:00'))
+            except:
+                pass
+        
+        # Try to extract from snippet or title
+        date_patterns = [
+            r'(\d{4})',  # Just year
+            r'(\w+ \d{1,2}, \d{4})',  # Month Day, Year
+            r'(\d{1,2}/\d{1,2}/\d{4})',  # MM/DD/YYYY
+        ]
+        
+        text = f"{result.get('title', '')} {result.get('snippet', '')}"
+        
+        for pattern in date_patterns:
+            matches = re.findall(pattern, text)
+            if matches:
+                try:
+                    # Simple year extraction
+                    year_match = re.search(r'(\d{4})', matches[0])
+                    if year_match:
+                        year = int(year_match.group(1))
+                        if 2000 <= year <= datetime.now().year:
+                            return datetime(year, 1, 1)
+                except:
+                    continue
+        
+        return None
+    
+    def _calculate_confidence_score(self, result: Dict[str, Any], query_context: str) -> float:
+        """Calculate confidence score for search result"""
+        
+        score = 0.5  # Base score
+        
+        title = result.get('title', '').lower()
+        snippet = result.get('snippet', '').lower()
+        
+        # Boost for authoritative sources
+        domain = urlparse(result.get('link', '')).netloc.lower()
+        if any(auth_domain in domain for auth_domain in ['edu', 'gov', 'gartner', 'mckinsey']):
+            score += 0.3
+        
+        # Boost for recent content
+        if any(recent_indicator in title + snippet 
+               for recent_indicator in ['2024', '2025', 'recent', 'latest']):
+            score += 0.2
+        
+        # Boost for specific metrics
+        if any(metric in title + snippet 
+               for metric in ['billion', 'million', 'market size', 'growth rate']):
+            score += 0.2
+        
+        return min(1.0, score)
+    
+    def _calculate_relevance_score(self, result: Dict[str, Any], query_context: str) -> float:
+        """Calculate relevance score for search result"""
+        
+        title = result.get('title', '').lower()
+        snippet = result.get('snippet', '').lower()
+        text = title + ' ' + snippet
+        
+        # Extract key terms from query context
+        query_terms = query_context.lower().split()
+        
+        # Calculate term overlap
+        matches = sum(1 for term in query_terms if term in text)
+        relevance = matches / len(query_terms) if query_terms else 0.5
+        
+        return min(1.0, relevance)
+    
+    def _get_domain_authority(self, domain: str) -> int:
+        """Get simplified domain authority score (0-100)"""
+        
+        # High authority domains
+        high_authority = {
+            'edu': 90, 'gov': 95, 'gartner.com': 85, 'mckinsey.com': 90,
+            'bloomberg.com': 85, 'reuters.com': 85, 'wsj.com': 85,
+            'techcrunch.com': 75, 'crunchbase.com': 80
+        }
+        
+        for auth_domain, score in high_authority.items():
+            if auth_domain in domain:
+                return score
+        
+        # Medium authority for common business sites
+        if any(indicator in domain for indicator in ['research', 'report', 'news']):
+            return 60
+        
+        return 40  # Default score
+    
+    def _extract_author_info(self, result: Dict[str, Any], domain: str) -> tuple:
+        """Extract author and organization information"""
+        
+        # Try to extract organization from domain
+        domain_parts = domain.split('.')
+        if len(domain_parts) >= 2:
+            organization = domain_parts[-2].title()
+        else:
+            organization = domain
+        
+        # Common organization mappings
+        org_mappings = {
+            'gartner': 'Gartner, Inc.',
+            'mckinsey': 'McKinsey & Company',
+            'bloomberg': 'Bloomberg L.P.',
+            'reuters': 'Thomson Reuters',
+            'techcrunch': 'TechCrunch'
+        }
+        
+        for key, mapped_org in org_mappings.items():
+            if key in domain:
+                organization = mapped_org
+                break
+        
+        return None, organization  # Author typically not available in search results
+    
+    def _calculate_data_quality_rating(self, result: Dict[str, Any], domain: str) -> float:
+        """Calculate overall data quality rating"""
+        
+        quality_factors = []
+        
+        # Domain credibility
+        if any(cred_domain in domain for cred_domain in ['edu', 'gov', 'gartner']):
+            quality_factors.append(0.9)
+        elif any(cred_domain in domain for cred_domain in ['bloomberg', 'reuters']):
+            quality_factors.append(0.8)
+        else:
+            quality_factors.append(0.6)
+        
+        # Content depth (based on snippet length)
+        snippet_length = len(result.get('snippet', ''))
+        if snippet_length > 200:
+            quality_factors.append(0.8)
+        elif snippet_length > 100:
+            quality_factors.append(0.7)
+        else:
+            quality_factors.append(0.5)
+        
+        # Data specificity
+        text = f"{result.get('title', '')} {result.get('snippet', '')}"
+        if any(metric in text for metric in ['$', '%', 'billion', 'million']):
+            quality_factors.append(0.8)
+        else:
+            quality_factors.append(0.6)
+        
+        return sum(quality_factors) / len(quality_factors)
+    
+    def _detect_country_focus(self, snippet: str, title: str) -> Optional[str]:
+        """Detect geographic focus from content"""
+        
+        text = f"{title} {snippet}".lower()
+        
+        # Country indicators
+        countries = [
+            'united states', 'usa', 'america', 'china', 'india', 'germany',
+            'japan', 'united kingdom', 'uk', 'france', 'canada', 'australia'
+        ]
+        
+        for country in countries:
+            if country in text:
+                return country.title()
+        
+        # Regional indicators
+        regions = ['europe', 'asia', 'north america', 'global', 'worldwide']
+        for region in regions:
+            if region in text:
+                return region.title()
+        
+        return None
+    
+    def _create_research_bibliography(self) -> Dict[str, Any]:
+        """Create comprehensive research bibliography"""
+        
+        # Group sources by quality tier
+        sources_by_tier = {}
+        sources_by_type = {}
+        
+        for source in self.all_sources:
+            tier = source.source_quality.value
+            content_type = source.content_type.value
+            
+            if tier not in sources_by_tier:
+                sources_by_tier[tier] = []
+            sources_by_tier[tier].append(source)
+            
+            if content_type not in sources_by_type:
+                sources_by_type[content_type] = []
+            sources_by_type[content_type].append(source)
+        
+        # Calculate bibliography statistics
+        unique_domains = len(set(urlparse(s.url).netloc for s in self.all_sources if s.url))
+        avg_quality = sum(s.data_quality_rating for s in self.all_sources) / len(self.all_sources) if self.all_sources else 0
+        
+        # Get publication date range
+        dates = [s.publication_date for s in self.all_sources if s.publication_date]
+        date_range = None
+        if dates:
+            min_date = min(dates)
+            max_date = max(dates)
+            date_range = f"{min_date.year}-{max_date.year}"
+        
+        return {
+            'sources_by_tier': sources_by_tier,
+            'sources_by_type': sources_by_type,
+            'total_sources': len(self.all_sources),
+            'unique_domains': unique_domains,
+            'average_source_quality': round(avg_quality, 2),
+            'publication_date_range': date_range,
+            'apa_citations': [source.get_citation_text() for source in self.all_sources]
+        }
+    
+    def _get_source_quality_summary(self) -> Dict[str, int]:
+        """Get summary of source quality distribution"""
+        
+        quality_counts = {}
+        for source in self.all_sources:
+            quality = source.source_quality.value
+            quality_counts[quality] = quality_counts.get(quality, 0) + 1
+        
+        return quality_counts
+    
+    def create_market_data_point(self, value: str, metric_type: str, 
+                                 sources: List[DataSource], 
+                                 currency: str = "USD",
+                                 time_period: str = None,
+                                 geographic_scope: str = None) -> MarketDataPoint:
+        """Create a MarketDataPoint with comprehensive source attribution"""
+        
+        # Create citations for the sources
+        citations = []
+        for i, source in enumerate(sources):
+            citation = Citation(
+                source_id=f"source_{self.source_id_counter + i}",
+                verification_status="verified" if source.source_quality in [SourceQuality.TIER_1, SourceQuality.TIER_2] else "unverified",
+                confidence_level="high" if source.confidence_score > 0.7 else "medium" if source.confidence_score > 0.4 else "low"
+            )
+            citations.append(citation)
+        
+        # Calculate cross-validation
+        cross_validated = len(sources) >= 2
+        
+        # Calculate overall confidence
+        avg_confidence = sum(s.confidence_score for s in sources) / len(sources) if sources else 0.0
+        
+        return MarketDataPoint(
+            value=value,
+            metric_type=metric_type,
+            currency=currency,
+            time_period=time_period,
+            geographic_scope=geographic_scope,
+            sources=sources,
+            citations=citations,
+            confidence_score=avg_confidence,
+            cross_validated=cross_validated
+        )
