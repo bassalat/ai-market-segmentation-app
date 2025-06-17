@@ -181,13 +181,18 @@ def render_b2b_questions():
             options=[
                 # Regions
                 "Global", "North America", "Europe", "Asia Pacific", "Latin America", "Middle East", "Africa",
-                # Major Countries (alphabetical)
-                "Australia", "Austria", "Belgium", "Brazil", "Canada", "China", "Denmark", 
-                "Finland", "France", "Germany", "India", "Indonesia", "Ireland", "Israel",
-                "Italy", "Japan", "Malaysia", "Mexico", "Netherlands", "New Zealand", 
-                "Norway", "Philippines", "Poland", "Portugal", "Singapore", "South Africa",
-                "South Korea", "Spain", "Sweden", "Switzerland", "Thailand", "Turkey",
-                "United Arab Emirates", "United Kingdom", "United States", "Vietnam"
+                # Countries (alphabetical)
+                "Afghanistan", "Albania", "Algeria", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
+                "Bahrain", "Bangladesh", "Belarus", "Belgium", "Bolivia", "Bosnia and Herzegovina", "Brazil", "Bulgaria",
+                "Cambodia", "Canada", "Chile", "China", "Colombia", "Costa Rica", "Croatia", "Cyprus", "Czech Republic",
+                "Denmark", "Dominican Republic", "Ecuador", "Egypt", "Estonia", "Ethiopia", "Finland", "France",
+                "Georgia", "Germany", "Ghana", "Greece", "Guatemala", "Honduras", "Hong Kong", "Hungary",
+                "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy",
+                "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kuwait", "Latvia", "Lebanon", "Lithuania", "Luxembourg",
+                "Malaysia", "Malta", "Mexico", "Morocco", "Netherlands", "New Zealand", "Nigeria", "North Macedonia", "Norway",
+                "Oman", "Pakistan", "Panama", "Peru", "Philippines", "Poland", "Portugal", "Puerto Rico", "Qatar",
+                "Romania", "Russia", "Saudi Arabia", "Serbia", "Singapore", "Slovakia", "Slovenia", "South Africa", "South Korea", "Spain", "Sri Lanka", "Sweden", "Switzerland",
+                "Taiwan", "Thailand", "Tunisia", "Turkey", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Venezuela", "Vietnam"
             ],
             default=st.session_state.form_data.get('geographic_focus', ["United States"])
         )
