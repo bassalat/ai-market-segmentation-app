@@ -1,6 +1,7 @@
 from typing import Dict, Any
 import streamlit as st
 import time
+import asyncio
 from models.user_inputs import UserInputs
 from models.segment_models import SegmentationResults, MarketAnalysis
 from services.claude_service import ClaudeService
@@ -27,9 +28,6 @@ class SegmentationEngine:
             st.write("**What's happening:** Executing deep market research with multiple search layers")
             
             if self.enhanced_search_service:
-                import asyncio
-                import time
-                
                 # Show search strategy
                 with st.expander("🔎 Search Strategy Details", expanded=False):
                     st.write("**Search Categories:**")
