@@ -276,7 +276,10 @@ def main():
         st.markdown("Our AI is working hard to identify your market segments. This may take a few minutes.")
         
         try:
-            engine = SegmentationEngine()
+            # Get Serper API key from environment or use hardcoded key
+            serper_api_key = os.getenv('SERPER_API_KEY', 'd02a86009eaa117bdf00747b6fcce9aa14fc1128')
+            
+            engine = SegmentationEngine(serper_api_key=serper_api_key)
             results = engine.process_segmentation(st.session_state.user_inputs)
             st.session_state.segmentation_results = results
             st.session_state.processing_complete = True
