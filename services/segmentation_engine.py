@@ -234,12 +234,16 @@ class SegmentationEngine:
                 status_text.write(f"✅ Persona created for **{segment.name}** ({elapsed_time:.1f}s)")
                 
                 # Show persona preview
-                if enhanced_segment.personas:
-                    persona = enhanced_segment.personas[0]
-                    st.write(f"**Preview - {persona.name}:**")
-                    st.write(f"• Role: {persona.role}")
-                    st.write(f"• Age: {persona.age}")
-                    st.write(f"• Key Challenge: {persona.pain_points[0] if persona.pain_points else 'N/A'}")
+                if enhanced_segment.persona_description:
+                    st.write(f"**Preview - {enhanced_segment.name} Persona:**")
+                    if enhanced_segment.demographics.get('age'):
+                        st.write(f"• Age: {enhanced_segment.demographics['age']}")
+                    if enhanced_segment.demographics.get('other_relevant'):
+                        st.write(f"• Profile: {enhanced_segment.demographics['other_relevant']}")
+                    if enhanced_segment.pain_points:
+                        st.write(f"• Key Challenge: {enhanced_segment.pain_points[0]}")
+                else:
+                    st.write(f"**Preview - {enhanced_segment.name}:** Persona being generated...")
             
             # Complete progress bar
             progress_bar.progress(1.0)
@@ -299,7 +303,9 @@ class SegmentationEngine:
         with col1:
             st.metric("Segments Created", len(enhanced_segments))
         with col2:
-            st.metric("Personas Generated", sum(len(s.personas) for s in enhanced_segments))
+            # Count personas as segments that have persona descriptions
+            personas_count = sum(1 for s in enhanced_segments if s.persona_description)
+            st.metric("Personas Generated", personas_count)
         with col3:
             st.metric("Data Points Analyzed", market_insights.get('data_quality_score', {}).get('total_data_points', 0))
         with col4:
@@ -315,7 +321,9 @@ class SegmentationEngine:
         
         st.write("**AI Analysis Performed:**")
         st.write(f"• Generated {len(enhanced_segments)} customer segments")
-        st.write(f"• Created {sum(len(s.personas) for s in enhanced_segments)} detailed personas")
+        # Count personas as segments that have persona descriptions
+        personas_count = sum(1 for s in enhanced_segments if s.persona_description)
+        st.write(f"• Created {personas_count} detailed personas")
         st.write("• Analyzed market size, growth, and competitive landscape")
         st.write("• Developed implementation roadmap and success metrics")
         
