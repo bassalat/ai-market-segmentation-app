@@ -69,6 +69,73 @@ def render_questionnaire():
             'description': description
         })
         
+        # Document Upload Section
+        st.markdown("---")
+        st.markdown("### 📄 Additional Context (Optional)")
+        st.markdown("Upload documents to provide additional context for your market analysis:")
+        
+        # Create expandable section for document upload
+        with st.expander("📁 Upload Documents (PDF, CSV, Excel)", expanded=False):
+            st.markdown("""
+            **Supported file types:**
+            - **PDF**: Market reports, research documents, business plans
+            - **CSV**: Customer data, market data, survey results  
+            - **Excel**: Financial data, market analysis, competitor data
+            
+            **How this helps:**
+            - Provides specific context about your market and customers
+            - Incorporates your existing data into the analysis
+            - Creates more accurate and personalized market segments
+            - Uses your internal insights to validate external research
+            """)
+            
+            uploaded_files = st.file_uploader(
+                "Choose files to upload",
+                type=['pdf', 'csv', 'xlsx', 'xls'],
+                accept_multiple_files=True,
+                help="Upload relevant documents that contain information about your market, customers, or business data"
+            )
+            
+            # Process uploaded files
+            document_context = None
+            if uploaded_files:
+                from services.document_processor import DocumentProcessor
+                
+                with st.spinner("Processing uploaded documents..."):
+                    processor = DocumentProcessor()
+                    processed_result = processor.process_uploaded_files(uploaded_files)
+                    
+                    if processed_result['has_context']:
+                        document_context = processed_result
+                        
+                        # Show processing results
+                        st.success(f"✅ Successfully processed {processed_result['file_count']} file(s)")
+                        
+                        # Display summary
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Files Processed", processed_result['file_count'])
+                        with col2:
+                            st.metric("Content Length", f"{processed_result['content_length']:,} chars")
+                        with col3:
+                            st.metric("Data Points", processed_result['data_points'])
+                        
+                        # Show summary
+                        st.info(f"📋 **Context Summary:** {processed_result['summary']}")
+                        
+                        # Show file details
+                        if st.checkbox("Show detailed file analysis", key="show_file_details"):
+                            for i, file_summary in enumerate(processed_result['processed_content']['file_summaries']):
+                                st.write(f"**File {i+1}:** {file_summary}")
+                            
+                            if processed_result['processed_content']['key_insights']:
+                                st.write("**Key Insights Extracted:**")
+                                for insight in processed_result['processed_content']['key_insights']:
+                                    st.write(f"• {insight}")
+        
+        # Store document context in session state
+        st.session_state.form_data['document_context'] = document_context
+        
         # Conditional sections based on business model
         b2b_inputs = None
         b2c_inputs = None
@@ -107,10 +174,24 @@ def render_questionnaire():
                 description=description
             )
             
+            # Create document context object if available
+            doc_context = None
+            if document_context:
+                from models.user_inputs import DocumentContext
+                doc_context = DocumentContext(
+                    has_context=document_context['has_context'],
+                    processed_content=document_context['processed_content'],
+                    summary=document_context['summary'],
+                    file_count=document_context['file_count'],
+                    content_length=document_context['content_length'],
+                    data_points=document_context['data_points']
+                )
+            
             user_inputs = UserInputs(
                 basic_info=basic_info,
                 b2b_inputs=b2b_inputs,
-                b2c_inputs=b2c_inputs
+                b2c_inputs=b2c_inputs,
+                document_context=doc_context
             )
             
             return user_inputs

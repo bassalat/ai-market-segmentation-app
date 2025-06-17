@@ -57,6 +57,8 @@ class ClaudeService:
         Additional Context:
         {self._format_additional_inputs(user_inputs)}
         
+        {self._format_document_context(user_inputs)}
+        
         Web Search Results:
         {search_results}
         
@@ -112,6 +114,8 @@ class ClaudeService:
         Additional Context:
         {self._format_additional_inputs(user_inputs)}
         
+        {self._format_document_context(user_inputs)}
+        
         For each segment, provide:
         1. Creative, memorable segment name
         2. Key characteristics (3-5 bullet points)
@@ -158,6 +162,8 @@ class ClaudeService:
         
         Pain Points:
         {', '.join(segment.pain_points)}
+        
+        {self._format_document_context(user_inputs)}
         
         Generate a comprehensive persona including:
         1. Detailed persona description (2-3 paragraphs)
@@ -440,3 +446,25 @@ class ClaudeService:
             return default
         except (ValueError, TypeError):
             return default
+    
+    def _format_document_context(self, user_inputs: UserInputs) -> str:
+        """Format user-provided document context for Claude prompts"""
+        
+        if not user_inputs.document_context or not user_inputs.document_context.has_context:
+            return ""
+        
+        # Use the document processor to format the context
+        from services.document_processor import DocumentProcessor
+        processor = DocumentProcessor()
+        
+        # Convert DocumentContext back to the format expected by the processor
+        processed_context = {
+            'has_context': user_inputs.document_context.has_context,
+            'processed_content': user_inputs.document_context.processed_content,
+            'summary': user_inputs.document_context.summary,
+            'file_count': user_inputs.document_context.file_count,
+            'content_length': user_inputs.document_context.content_length,
+            'data_points': user_inputs.document_context.data_points
+        }
+        
+        return processor.format_context_for_claude(processed_context)

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from enum import Enum
 
 class BusinessModel(Enum):
@@ -42,7 +42,17 @@ class B2CInputs:
     lifestyle_categories: List[str]
 
 @dataclass
+class DocumentContext:
+    has_context: bool = False
+    processed_content: Dict[str, Any] = None
+    summary: str = ""
+    file_count: int = 0
+    content_length: int = 0
+    data_points: int = 0
+
+@dataclass
 class UserInputs:
     basic_info: BasicInfo
     b2b_inputs: Optional[B2BInputs] = None
     b2c_inputs: Optional[B2CInputs] = None
+    document_context: Optional[DocumentContext] = None
