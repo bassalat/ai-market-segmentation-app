@@ -119,7 +119,22 @@ class SegmentationEngine:
             st.write(f"• Company: {user_inputs.basic_info.company_name}")
             st.write(f"• Industry: {user_inputs.basic_info.industry}")
             st.write(f"• Business Model: {user_inputs.basic_info.business_model.value}")
-            st.write(f"• Target Market: {user_inputs.basic_info.target_market}")
+            st.write(f"• Description: {user_inputs.basic_info.description}")
+            
+            # Show target market info based on business model
+            if user_inputs.b2b_inputs:
+                target_info = f"B2B: {', '.join([size.value for size in user_inputs.b2b_inputs.target_company_sizes])}"
+                if user_inputs.b2b_inputs.target_industries:
+                    target_info += f" in {', '.join(user_inputs.b2b_inputs.target_industries)}"
+                st.write(f"• Target Market: {target_info}")
+            elif user_inputs.b2c_inputs:
+                target_info = f"B2C: {', '.join(user_inputs.b2c_inputs.target_age_groups)}"
+                if user_inputs.b2c_inputs.geographic_markets:
+                    target_info += f" in {', '.join(user_inputs.b2c_inputs.geographic_markets)}"
+                st.write(f"• Target Market: {target_info}")
+            else:
+                st.write("• Target Market: General market (details in description)")
+            
             st.write("**Market Intelligence:**")
             st.write(f"• {len(formatted_search_data.split())} words of market data")
             st.write("• Search results from multiple sources")
