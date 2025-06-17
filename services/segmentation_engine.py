@@ -29,13 +29,12 @@ class SegmentationEngine:
             
             if self.enhanced_search_service:
                 # Show search strategy
-                with st.expander("🔎 Search Strategy Details", expanded=False):
-                    st.write("**Search Categories:**")
-                    st.write("• Market Size & TAM Analysis")
-                    st.write("• Customer Segments & Demographics")
-                    st.write("• Competitor Landscape")
-                    st.write("• Industry Trends & Growth Factors")
-                    st.write("• Academic Research & Reports")
+                st.write("**Search Categories:**")
+                st.write("• Market Size & TAM Analysis")
+                st.write("• Customer Segments & Demographics")
+                st.write("• Competitor Landscape")
+                st.write("• Industry Trends & Growth Factors")
+                st.write("• Academic Research & Reports")
                 
                 start_time = time.time()
                 
@@ -75,12 +74,12 @@ class SegmentationEngine:
                 quality_data = market_insights.get('data_quality_score', {})
                 quality_score = quality_data.get('overall_score', 0)
                 
-                with st.expander("📊 Data Quality Breakdown", expanded=False):
-                    st.write(f"**Overall Quality Score:** {quality_score}%")
-                    st.write(f"**Total Data Points:** {quality_data.get('total_data_points', 0)}")
-                    st.write(f"**Authoritative Sources:** {quality_data.get('authoritative_sources', 0)}")
-                    st.write(f"**Recent Data (2024-2025):** {quality_data.get('recent_data_points', 0)}")
-                    st.write(f"**Deep Content Analyzed:** {quality_data.get('deep_content_length', 0):,} characters")
+                st.write("**📊 Data Quality Breakdown:**")
+                st.write(f"• Overall Quality Score: {quality_score}%")
+                st.write(f"• Total Data Points: {quality_data.get('total_data_points', 0)}")
+                st.write(f"• Authoritative Sources: {quality_data.get('authoritative_sources', 0)}")
+                st.write(f"• Recent Data (2024-2025): {quality_data.get('recent_data_points', 0)}")
+                st.write(f"• Deep Content Analyzed: {quality_data.get('deep_content_length', 0):,} characters")
                 
                 st.success(f"✅ Market intelligence collected in {elapsed_time:.1f} seconds")
                 
@@ -107,32 +106,31 @@ class SegmentationEngine:
             st.write("**What's happening:** Claude is analyzing all collected data to understand your market")
             
             # Show what Claude is analyzing
-            with st.expander("🤖 AI Analysis Process", expanded=False):
-                st.write("**Claude is extracting:**")
-                st.write("• Total Addressable Market (TAM) size and projections")
-                st.write("• Industry growth rates and CAGR")
-                st.write("• Key market drivers and trends")
-                st.write("• Commercial urgencies and timing factors")
-                st.write("• Top competitors and their positioning")
-                st.write("• Market opportunities and challenges")
+            st.write("**🤖 Claude is extracting:**")
+            st.write("• Total Addressable Market (TAM) size and projections")
+            st.write("• Industry growth rates and CAGR")
+            st.write("• Key market drivers and trends")
+            st.write("• Commercial urgencies and timing factors")
+            st.write("• Top competitors and their positioning")
+            st.write("• Market opportunities and challenges")
             
             # Show data being sent to Claude
-            with st.expander("📄 Data Sent to Claude AI", expanded=False):
-                st.write("**Business Context:**")
-                st.write(f"• Company: {user_inputs.basic_info.company_name}")
-                st.write(f"• Industry: {user_inputs.basic_info.industry}")
-                st.write(f"• Business Model: {user_inputs.basic_info.business_model.value}")
-                st.write(f"• Target Market: {user_inputs.basic_info.target_market}")
-                st.write("\n**Market Intelligence:**")
-                st.write(f"• {len(formatted_search_data.split())} words of market data")
-                st.write("• Search results from multiple sources")
-                st.write("• Scraped content from authoritative sites")
+            st.write("**📄 Business Context:**")
+            st.write(f"• Company: {user_inputs.basic_info.company_name}")
+            st.write(f"• Industry: {user_inputs.basic_info.industry}")
+            st.write(f"• Business Model: {user_inputs.basic_info.business_model.value}")
+            st.write(f"• Target Market: {user_inputs.basic_info.target_market}")
+            st.write("**Market Intelligence:**")
+            st.write(f"• {len(formatted_search_data.split())} words of market data")
+            st.write("• Search results from multiple sources")
+            st.write("• Scraped content from authoritative sites")
             
             # Show actual Claude prompt (optional)
-            with st.expander("🤖 View Claude AI Prompt", expanded=False):
-                st.code(self.claude_service._build_market_analysis_prompt(
-                    user_inputs, formatted_search_data
-                )[:1000] + "...", language="text")
+            st.write("**🤖 Claude AI Prompt Preview:**")
+            prompt_preview = self.claude_service._build_market_analysis_prompt(
+                user_inputs, formatted_search_data
+            )[:500] + "..."
+            st.text(prompt_preview)
             
             start_time = time.time()
             market_analysis = self.claude_service.analyze_market(user_inputs, formatted_search_data)
@@ -143,26 +141,25 @@ class SegmentationEngine:
             
             # Preview key findings
             if hasattr(market_analysis, 'total_addressable_market'):
-                with st.expander("🎯 Key Market Findings", expanded=True):
-                    st.write(f"**TAM:** {market_analysis.total_addressable_market}")
-                    if hasattr(market_analysis, 'industry_growth_rate'):
-                        st.write(f"**Growth Rate:** {market_analysis.industry_growth_rate}")
-                    if hasattr(market_analysis, 'key_competitors') and market_analysis.key_competitors:
-                        st.write(f"**Competitors Found:** {len(market_analysis.key_competitors)}")
+                st.write("**🎯 Key Market Findings:**")
+                st.write(f"• TAM: {market_analysis.total_addressable_market}")
+                if hasattr(market_analysis, 'industry_growth_rate'):
+                    st.write(f"• Growth Rate: {market_analysis.industry_growth_rate}")
+                if hasattr(market_analysis, 'key_competitors') and market_analysis.key_competitors:
+                    st.write(f"• Competitors Found: {len(market_analysis.key_competitors)}")
         
         # Phase 3: Segment Identification
         with st.status("🎯 Identifying market segments with Claude AI...", expanded=True) as status:
             st.write("**What's happening:** Claude is identifying distinct customer groups based on patterns in the data")
             
             # Show segmentation methodology
-            with st.expander("🔬 Segmentation Methodology", expanded=False):
-                st.write("**Claude analyzes multiple dimensions:**")
-                st.write("• Company size and industry vertical")
-                st.write("• Pain points and challenges")
-                st.write("• Buying behavior and decision factors")
-                st.write("• Technology adoption levels")
-                st.write("• Budget and resource availability")
-                st.write("• Geographic and regulatory factors")
+            st.write("**🔬 Claude analyzes multiple dimensions:**")
+            st.write("• Company size and industry vertical")
+            st.write("• Pain points and challenges")
+            st.write("• Buying behavior and decision factors")
+            st.write("• Technology adoption levels")
+            st.write("• Budget and resource availability")
+            st.write("• Geographic and regulatory factors")
             
             # Show progress
             progress_placeholder = st.empty()
@@ -179,27 +176,22 @@ class SegmentationEngine:
             st.success(f"✅ {len(segments)} distinct segments identified in {elapsed_time:.1f} seconds")
             
             # Show segment summary
-            with st.expander("📊 Segment Overview", expanded=True):
-                for i, segment in enumerate(segments, 1):
-                    col1, col2 = st.columns([3, 1])
-                    with col1:
-                        st.write(f"**Segment {i}:** {segment.name}")
-                    with col2:
-                        st.write(f"Size: {segment.size_percentage}%")
+            st.write("**📊 Segment Overview:**")
+            for i, segment in enumerate(segments, 1):
+                st.write(f"• **Segment {i}:** {segment.name} ({segment.size_percentage}% of market)")
         
         # Phase 4: Persona Generation
         with st.status("👥 Creating detailed personas with Claude AI...", expanded=True) as status:
             st.write("**What's happening:** Claude is creating realistic buyer personas for each segment")
             
             # Show persona creation process
-            with st.expander("🎭 Persona Creation Process", expanded=False):
-                st.write("**For each segment, Claude creates:**")
-                st.write("• Demographic profiles (age, role, experience)")
-                st.write("• Psychographic insights (values, motivations)")
-                st.write("• Daily challenges and pain points")
-                st.write("• Decision-making criteria")
-                st.write("• Communication preferences")
-                st.write("• Objections and concerns")
+            st.write("**🎭 For each segment, Claude creates:**")
+            st.write("• Demographic profiles (age, role, experience)")
+            st.write("• Psychographic insights (values, motivations)")
+            st.write("• Daily challenges and pain points")
+            st.write("• Decision-making criteria")
+            st.write("• Communication preferences")
+            st.write("• Objections and concerns")
             
             enhanced_segments = []
             total_time = 0
@@ -229,10 +221,10 @@ class SegmentationEngine:
                 # Show persona preview
                 if enhanced_segment.personas:
                     persona = enhanced_segment.personas[0]
-                    with st.expander(f"Preview: {persona.name}", expanded=False):
-                        st.write(f"**Role:** {persona.role}")
-                        st.write(f"**Age:** {persona.age}")
-                        st.write(f"**Key Challenge:** {persona.pain_points[0] if persona.pain_points else 'N/A'}")
+                    st.write(f"**Preview - {persona.name}:**")
+                    st.write(f"• Role: {persona.role}")
+                    st.write(f"• Age: {persona.age}")
+                    st.write(f"• Key Challenge: {persona.pain_points[0] if persona.pain_points else 'N/A'}")
             
             # Complete progress bar
             progress_bar.progress(1.0)
@@ -243,14 +235,13 @@ class SegmentationEngine:
             st.write("**What's happening:** Creating actionable go-to-market recommendations")
             
             # Show what's being generated
-            with st.expander("🚀 Implementation Components", expanded=False):
-                st.write("**Strategic Planning:**")
-                st.write("• 90-day phased roadmap")
-                st.write("• Priority segment sequencing")
-                st.write("• Quick win opportunities")
-                st.write("• Success metrics and KPIs")
-                st.write("• Channel recommendations")
-                st.write("• Budget allocation guidance")
+            st.write("**🚀 Strategic Planning:**")
+            st.write("• 90-day phased roadmap")
+            st.write("• Priority segment sequencing")
+            st.write("• Quick win opportunities")
+            st.write("• Success metrics and KPIs")
+            st.write("• Channel recommendations")
+            st.write("• Budget allocation guidance")
             
             start_time = time.time()
             
@@ -273,13 +264,13 @@ class SegmentationEngine:
             st.success(f"✅ Implementation plan ready in {elapsed_time:.1f} seconds")
             
             # Preview key recommendations
-            with st.expander("💡 Key Recommendations Preview", expanded=True):
-                st.write("**Quick Wins:**")
-                for win in quick_wins[:3]:
-                    st.write(f"• {win}")
-                st.write("\n**Success Metrics:**")
-                for metric in success_metrics[:3]:
-                    st.write(f"• {metric}")
+            st.write("**💡 Key Recommendations Preview:**")
+            st.write("**Quick Wins:**")
+            for win in quick_wins[:3]:
+                st.write(f"• {win}")
+            st.write("**Success Metrics:**")
+            for metric in success_metrics[:3]:
+                st.write(f"• {metric}")
         
         # Update market analysis with segments
         market_analysis.segments = enhanced_segments
@@ -301,22 +292,22 @@ class SegmentationEngine:
             st.metric("Total Time", f"{total_analysis_time:.1f}s")
         
         # Show what was accomplished
-        with st.expander("📊 Analysis Summary", expanded=True):
-            st.write("**Market Intelligence Gathered:**")
-            st.write(f"• Analyzed {metadata.get('total_queries', 0)} search queries")
-            st.write(f"• Scraped {metadata.get('scraped_pages', 0)} authoritative web pages")
-            st.write(f"• Processed {quality_data.get('deep_content_length', 0):,} characters of content")
-            
-            st.write("\n**AI Analysis Performed:**")
-            st.write(f"• Generated {len(enhanced_segments)} customer segments")
-            st.write(f"• Created {sum(len(s.personas) for s in enhanced_segments)} detailed personas")
-            st.write("• Analyzed market size, growth, and competitive landscape")
-            st.write("• Developed implementation roadmap and success metrics")
-            
-            st.write("\n**Ready for Download:**")
-            st.write("• Professional PDF report")
-            st.write("• Machine-readable JSON data")
-            st.write("• Implementation roadmap")
+        st.markdown("### 📊 Analysis Summary")
+        st.write("**Market Intelligence Gathered:**")
+        st.write(f"• Analyzed {metadata.get('total_queries', 0)} search queries")
+        st.write(f"• Scraped {metadata.get('scraped_pages', 0)} authoritative web pages")
+        st.write(f"• Processed {quality_data.get('deep_content_length', 0):,} characters of content")
+        
+        st.write("**AI Analysis Performed:**")
+        st.write(f"• Generated {len(enhanced_segments)} customer segments")
+        st.write(f"• Created {sum(len(s.personas) for s in enhanced_segments)} detailed personas")
+        st.write("• Analyzed market size, growth, and competitive landscape")
+        st.write("• Developed implementation roadmap and success metrics")
+        
+        st.write("**Ready for Download:**")
+        st.write("• Professional PDF report")
+        st.write("• Machine-readable JSON data")
+        st.write("• Implementation roadmap")
         
         return SegmentationResults(
             market_analysis=market_analysis,
