@@ -734,7 +734,10 @@ class EnhancedSearchService:
                 
                 for match in matches:
                     value, unit = match
-                    numeric_value = float(value.replace(',', ''))
+                    try:
+                        numeric_value = float(value.replace(',', ''))
+                    except (ValueError, TypeError):
+                        continue  # Skip invalid values
                     
                     # Validate the market size is reasonable
                     normalized_value = self._normalize_market_value(value, unit)
@@ -773,7 +776,10 @@ class EnhancedSearchService:
             
             for match in growth_matches:
                 rate, type = match
-                rate_value = float(rate.replace(',', ''))
+                try:
+                    rate_value = float(rate.replace(',', ''))
+                except (ValueError, TypeError):
+                    continue  # Skip invalid rates
                 
                 # Sanity check for growth rates
                 if rate_value > 100:  # > 100% annual growth is suspicious
@@ -877,7 +883,10 @@ class EnhancedSearchService:
     def _normalize_market_value(self, value: str, unit: str) -> float:
         """Normalize market values to millions"""
         
-        numeric_value = float(value.replace(',', ''))
+        try:
+            numeric_value = float(value.replace(',', ''))
+        except (ValueError, TypeError):
+            return 0.0  # Return 0 for invalid values
         
         unit_lower = unit.lower()
         if unit_lower in ['trillion', 't']:

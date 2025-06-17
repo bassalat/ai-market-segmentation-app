@@ -99,10 +99,16 @@ def render_overview_section(market_analysis):
             current_num = re.search(r'(\d+\.?\d*)', current_market_value)
             projected_num = re.search(r'(\d+\.?\d*)', projected_market_value)
             if current_num and projected_num:
-                current_val = float(current_num.group(1))
-                projected_val = float(projected_num.group(1))
-                growth_percent = ((projected_val - current_val) / current_val) * 100
-                growth_subtext = f"{growth_percent:.1f}% projected growth"
+                try:
+                    current_val = float(current_num.group(1))
+                    projected_val = float(projected_num.group(1))
+                    if current_val > 0:  # Avoid division by zero
+                        growth_percent = ((projected_val - current_val) / current_val) * 100
+                        growth_subtext = f"{growth_percent:.1f}% projected growth"
+                    else:
+                        growth_subtext = "Growth data unavailable"
+                except (ValueError, TypeError):
+                    growth_subtext = "Growth calculation error"
         
         # Create 2-box horizontal layout
         box_col1, box_col2 = st.columns(2)

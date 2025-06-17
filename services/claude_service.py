@@ -326,7 +326,7 @@ class ClaudeService:
                     segment = Segment(
                         name=seg_data.get("name", "Unnamed Segment"),
                         characteristics=seg_data.get("characteristics", []),
-                        size_percentage=float(seg_data.get("size_percentage", 0.0)),
+                        size_percentage=self._safe_float_conversion(seg_data.get("size_percentage", 0.0)),
                         size_estimation=seg_data.get("size_estimation", ""),
                         pain_points=seg_data.get("pain_points", []),
                         buying_triggers=seg_data.get("buying_triggers", []),
@@ -423,3 +423,20 @@ class ClaudeService:
             # Fallback - extract basic info from text
             segment.persona_description = response[:500] if len(response) > 500 else response
             return segment
+    
+    def _safe_float_conversion(self, value, default=0.0):
+        """Safely convert a value to float with fallback"""
+        try:
+            if value is None or value == "":
+                return default
+            if isinstance(value, (int, float)):
+                return float(value)
+            if isinstance(value, str):
+                # Clean the string first
+                cleaned = value.strip().replace(',', '').replace('$', '').replace('%', '')
+                if cleaned == "":
+                    return default
+                return float(cleaned)
+            return default
+        except (ValueError, TypeError):
+            return default
