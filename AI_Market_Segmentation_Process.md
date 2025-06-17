@@ -30,17 +30,17 @@ flowchart TD
     E --> G
     F --> G
     
-    G --> H[Phase 1: Market Research]
-    H --> I[Web Search: Industry Trends]
-    H --> J[Web Search: Competitor Analysis]
-    H --> K[Web Search: Customer Insights]
+    G --> H[Phase 1: Enhanced Deep Search]
+    H --> I[25+ Targeted Search Queries]
+    H --> J[Web Scraping Top Results]
+    H --> K[Multi-Source Data Aggregation]
     
     I --> L[Claude AI: Market Analysis]
     J --> L
     K --> L
     
-    L --> M[Phase 2: Enhanced Market Intelligence]
-    M --> N[Industry Growth Factors & CAGR]
+    L --> M[Phase 2: Market Intelligence]
+    M --> N[Market Size Validation & CAGR]
     M --> O[Commercial Urgencies Analysis]
     M --> P[Top 5 Competitor Research]
     
@@ -107,16 +107,30 @@ flowchart TD
 - Customer motivations and lifestyle preferences
 - Psychographic characteristics
 
-#### 1.2 Automated Market Research
-**Duration**: 1-2 minutes  
-**Responsible**: AI System
+#### 1.2 Enhanced Deep Search & Market Research
+**Duration**: 30-60 seconds  
+**Responsible**: AI System with Serper.dev Integration
 
-The system automatically performs web searches to gather:
-- Industry market size and growth trends
-- Competitive landscape analysis
-- Customer behavior patterns and preferences
-- Emerging market opportunities
-- Industry-specific pain points and challenges
+**Advanced Search Capabilities**:
+- **25+ Targeted Searches**: Comprehensive query coverage across multiple categories
+- **Web Scraping**: Full-page content extraction from authoritative sources
+- **Parallel Processing**: Concurrent search execution for speed
+- **Quality Scoring**: Confidence metrics for all data points
+- **Relevance Validation**: Industry-specific keyword matching
+
+**Search Categories**:
+- Market size and TAM analysis with validation
+- Customer segments and demographics research
+- Competitor landscape and funding data
+- Industry trends and growth factors
+- Academic research and industry reports
+
+**Data Quality Metrics**:
+- Overall quality score with confidence levels
+- Source authority validation
+- Recency checks (prioritizing 2024-2025 data)
+- Market size sanity checks and validation
+- Relevance scoring for industry alignment
 
 ### Phase 2: Enhanced Market Intelligence
 
@@ -272,13 +286,30 @@ For each identified segment, the AI creates:
 
 ### AI Components
 - **Primary AI**: Claude Sonnet 4 (claude-3-5-sonnet-20241022)
-- **Search Integration**: Web research for real-time market data
-- **Data Processing**: Structured analysis and synthesis
-- **Enhanced Intelligence**: Industry growth analysis, competitive research, role mapping
+- **Enhanced Search**: Serper.dev API with 25+ queries per analysis
+- **Web Scraping**: Intelligent content extraction from search results
+- **Data Processing**: Multi-layer validation and confidence scoring
+- **Market Validation**: Sanity checks for market size and growth rates
+
+### Search & Data Quality
+- **Search Volume**: 25+ targeted queries across 5 categories
+- **Data Sources**: 20+ authoritative sources per analysis
+- **Content Analysis**: 50,000+ characters of deep content extraction
+- **Confidence Scoring**: Multi-factor validation for all data points
+- **Industry Relevance**: Dynamic keyword matching for accuracy
+
+### AI Analysis Transparency
+- **Real-time Progress**: Detailed visibility into each analysis phase
+- **Search Statistics**: Queries executed, sources analyzed, pages scraped
+- **AI Methodology**: Expandable explanations of AI processes
+- **Quality Metrics**: Data quality scores and confidence levels
+- **Timing Analytics**: Performance metrics for each phase
 
 ### Output Quality Assurance
-- **Fallback Mechanisms**: Graceful handling of API failures
-- **Data Validation**: Ensuring segment quality and completeness
+- **Market Size Validation**: Prevents unrealistic values (e.g., trillions for niche markets)
+- **Growth Rate Limits**: Caps at reasonable percentages (100% max)
+- **Relevance Filtering**: Industry-specific keyword validation
+- **Confidence Levels**: High/Medium/Low ratings for market data
 - **Error Recovery**: Automatic retry logic for failed processes
 
 ## Best Practices for GTM Teams
