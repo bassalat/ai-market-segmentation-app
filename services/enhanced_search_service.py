@@ -12,9 +12,14 @@ from services.web_scraper import WebScraper
 from models.segment_models import DataSource, Citation, MarketDataPoint, SourceQuality, ContentType
 
 class EnhancedSearchService:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str = None):
         self.api_key = api_key
         self.base_url = "https://google.serper.dev/search"
+        
+        # Check if API key is available
+        if not self.api_key:
+            # Service will work but without actual search capabilities
+            pass
         self.cache = {}
         self.cache_duration = timedelta(hours=24)
         self.web_scraper = WebScraper()
@@ -23,6 +28,10 @@ class EnhancedSearchService:
         
     async def deep_market_search(self, company_name: str, industry: str, business_model: str) -> Dict[str, Any]:
         """Perform comprehensive market research with multiple search types and layers"""
+        
+        # Check if API key is available
+        if not self.api_key:
+            return self._generate_fallback_response(company_name, industry, business_model)
         
         # Phase 1: Generate expanded query sets
         queries = self._generate_query_sets(company_name, industry, business_model)
@@ -1651,3 +1660,49 @@ class EnhancedSearchService:
             confidence_score=avg_confidence,
             cross_validated=cross_validated
         )
+    
+    def _generate_fallback_response(self, company_name: str, industry: str, business_model: str) -> Dict[str, Any]:
+        """Generate a fallback response when API key is not available"""
+        return {
+            'search_metadata': {
+                'total_queries': 0,
+                'data_sources': [],
+                'scraped_pages': 0,
+                'search_note': 'Limited search capabilities - API key not provided'
+            },
+            'market_insights': {
+                'market_size': {
+                    'current_market_size': 0,
+                    'confidence_level': 'Low - No search data available'
+                },
+                'data_quality_score': {
+                    'overall_score': 0,
+                    'total_data_points': 0,
+                    'authoritative_sources': 0,
+                    'recent_data_points': 0,
+                    'deep_content_length': 0
+                }
+            }
+        }
+    
+    async def search_web(self, query: str, max_results: int = 5) -> str:
+        """Simple search method for compatibility with enhanced questionnaire service"""
+        if not self.api_key:
+            return f"Search query: {query} (No search results - API key not available)"
+        
+        # Use the existing search infrastructure
+        try:
+            async with aiohttp.ClientSession() as session:
+                search_query = {"text": query, "priority": "medium", "type": "general"}
+                result = await self._search_serper(session, search_query)
+                
+                # Extract relevant information from results
+                if result and "organic" in result:
+                    search_results = []
+                    for item in result["organic"][:max_results]:
+                        search_results.append(f"Title: {item.get('title', '')}\nSnippet: {item.get('snippet', '')}\n")
+                    return "\n".join(search_results)
+                else:
+                    return f"Search query: {query} (No results found)"
+        except Exception as e:
+            return f"Search query: {query} (Search failed: {str(e)})"
