@@ -13,9 +13,9 @@ from services.enhanced_search_service import EnhancedSearchService
 class EnhancedQuestionnaireService:
     """Service for processing enhanced questionnaire data per PRD requirements"""
     
-    def __init__(self):
+    def __init__(self, serper_api_key: str = None):
         self.claude_service = ClaudeService()
-        self.search_service = EnhancedSearchService()
+        self.search_service = EnhancedSearchService(serper_api_key) if serper_api_key else None
     
     async def process_inputs(self, user_inputs: UserInputs) -> Dict[str, Any]:
         """
@@ -312,8 +312,11 @@ class EnhancedQuestionnaireService:
     async def _research_industry_analysis(self, industry: str, description: str) -> Dict[str, Any]:
         """Research industry growth factors, CAGR, and market maturity"""
         
-        query = f"{industry} market size CAGR growth drivers technology trends 2024 2025"
-        search_results = await self.search_service.search_web(query, max_results=5)
+        # Get search results if search service is available
+        search_results = ""
+        if self.search_service:
+            query = f"{industry} market size CAGR growth drivers technology trends 2024 2025"
+            search_results = await self.search_service.search_web(query, max_results=5)
         
         analysis_prompt = f"""
         Based on the following search results about the {industry} industry, provide a comprehensive industry analysis:
@@ -340,8 +343,11 @@ class EnhancedQuestionnaireService:
     async def _research_competitive_landscape(self, industry: str, description: str, company_name: str) -> Dict[str, Any]:
         """Research detailed competitive landscape with business metrics"""
         
-        query = f"{industry} companies competitors funding revenue business model {company_name}"
-        search_results = await self.search_service.search_web(query, max_results=8)
+        # Get search results if search service is available
+        search_results = ""
+        if self.search_service:
+            query = f"{industry} companies competitors funding revenue business model {company_name}"
+            search_results = await self.search_service.search_web(query, max_results=8)
         
         competitive_prompt = f"""
         Based on the search results, identify and analyze the top 5-8 competitors in the {industry} space:
@@ -374,8 +380,11 @@ class EnhancedQuestionnaireService:
     async def _research_market_sizing(self, industry: str, description: str) -> Dict[str, Any]:
         """Research market sizing, TAM, and growth projections"""
         
-        query = f"{industry} total addressable market TAM SAM SOM market size valuation projections"
-        search_results = await self.search_service.search_web(query, max_results=5)
+        # Get search results if search service is available
+        search_results = ""
+        if self.search_service:
+            query = f"{industry} total addressable market TAM SAM SOM market size valuation projections"
+            search_results = await self.search_service.search_web(query, max_results=5)
         
         sizing_prompt = f"""
         Based on the search results, provide comprehensive market sizing analysis:
@@ -410,8 +419,11 @@ class EnhancedQuestionnaireService:
         else:
             triggers = ''
         
-        query = f"{industry} regulatory changes compliance requirements market pressures urgency factors {triggers}"
-        search_results = await self.search_service.search_web(query, max_results=5)
+        # Get search results if search service is available
+        search_results = ""
+        if self.search_service:
+            query = f"{industry} regulatory changes compliance requirements market pressures urgency factors {triggers}"
+            search_results = await self.search_service.search_web(query, max_results=5)
         
         urgency_prompt = f"""
         Based on the search results, identify commercial urgencies and timing factors:

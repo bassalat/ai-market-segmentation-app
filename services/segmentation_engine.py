@@ -16,7 +16,7 @@ class SegmentationEngine:
     def __init__(self, serper_api_key: str = None):
         self.claude_service = ClaudeService()
         self.enhanced_search_service = EnhancedSearchService(serper_api_key) if serper_api_key else None
-        self.enhanced_questionnaire_service = EnhancedQuestionnaireService()
+        self.enhanced_questionnaire_service = EnhancedQuestionnaireService(serper_api_key)
         self.jtbd_service = JTBDAnalysisService()
         self.gtm_strategy_service = GTMStrategyService()
         self.messaging_service = MessagingFrameworkService()
