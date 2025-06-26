@@ -109,7 +109,7 @@ class MessagingFrameworkService:
             Create a compelling value proposition for this market segment:
 
             Segment: {segment.name}
-            Description: {getattr(segment, 'persona_description', 'No description available')}
+            Description: {segment.description}
             Key Characteristics: {segment.characteristics}
             Pain Points: {segment.pain_points}
             Use Cases: {getattr(segment, 'use_cases', [])}
@@ -233,7 +233,7 @@ class MessagingFrameworkService:
             Create compelling messaging hooks for this segment:
 
             Segment: {segment.name}
-            Description: {getattr(segment, 'persona_description', 'No description available')}
+            Description: {segment.description}
             Pain Points: {segment.pain_points}
             Characteristics: {segment.characteristics}
 

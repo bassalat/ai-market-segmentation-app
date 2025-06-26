@@ -124,6 +124,11 @@ class Segment:
     sources: List[DataSource] = field(default_factory=list)
     confidence_score: float = 0.0
     validation_notes: List[str] = field(default_factory=list)
+    
+    @property
+    def description(self) -> str:
+        """Alias for persona_description for backward compatibility"""
+        return self.persona_description
 
 @dataclass
 class CompetitiveAnalysis:
