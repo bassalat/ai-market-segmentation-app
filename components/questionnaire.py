@@ -317,7 +317,7 @@ def render_b2b_questions():
         "⭐⭐ Does your product need to integrate with tools your customers already use?",
         value=st.session_state.form_data.get('integration_requirements', ''),
         placeholder="List key integrations: CRM (Salesforce, HubSpot), productivity tools (Slack, Microsoft), etc.",
-        height=60,
+        height=80,
         help="Filters segments by compatibility"
     )
     
@@ -328,7 +328,7 @@ def render_b2b_questions():
         "⭐⭐ When are customers more likely to buy?",
         value=st.session_state.form_data.get('buying_triggers', ''),
         placeholder="e.g., after funding, org change, new compliance requirements, security breach, rapid growth",
-        height=60,
+        height=80,
         help="Drives timing of GTM and campaigns"
     )
     
@@ -487,7 +487,7 @@ def render_b2c_questions():
         "⭐⭐⭐ What are common situations or events when people decide to buy?",
         value=st.session_state.form_data.get('buying_triggers', ''),
         placeholder="e.g., holiday, stress, travel, life milestone, new job, moving, health concerns",
-        height=60,
+        height=80,
         help="Helps predict intent timing and campaign focus"
     )
     
@@ -501,7 +501,7 @@ def render_b2c_questions():
             "⭐⭐⭐ What do your customers care about most?",
             value=st.session_state.form_data.get('customer_priorities', ''),
             placeholder="e.g., convenience, looking good, saving money, feeling healthy, status, family time",
-            height=60,
+            height=80,
             help="Drives message resonance and emotional hooks"
         )
     
@@ -550,7 +550,7 @@ def render_b2c_questions():
         "⭐⭐ Are there any popular alternatives or brands your customer might already be using or considering?",
         value=st.session_state.form_data.get('existing_alternatives', ''),
         placeholder="List key competitors, alternative solutions, or brands in your space...",
-        height=60,
+        height=80,
         help="Positions your product in the customer's mental landscape"
     )
     
