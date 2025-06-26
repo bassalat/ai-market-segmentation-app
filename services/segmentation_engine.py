@@ -6,11 +6,21 @@ from models.user_inputs import UserInputs
 from models.segment_models import SegmentationResults, MarketAnalysis
 from services.claude_service import ClaudeService
 from services.enhanced_search_service import EnhancedSearchService
+from services.enhanced_questionnaire_service import EnhancedQuestionnaireService
+from services.jtbd_analysis_service import JTBDAnalysisService
+from services.gtm_strategy_service import GTMStrategyService
+from services.messaging_framework_service import MessagingFrameworkService
+from services.competitive_intelligence_service import CompetitiveIntelligenceService
 
 class SegmentationEngine:
     def __init__(self, serper_api_key: str = None):
         self.claude_service = ClaudeService()
         self.enhanced_search_service = EnhancedSearchService(serper_api_key) if serper_api_key else None
+        self.enhanced_questionnaire_service = EnhancedQuestionnaireService()
+        self.jtbd_service = JTBDAnalysisService()
+        self.gtm_strategy_service = GTMStrategyService()
+        self.messaging_service = MessagingFrameworkService()
+        self.competitive_intelligence_service = CompetitiveIntelligenceService(serper_api_key)
     
     def process_segmentation(self, user_inputs: UserInputs) -> SegmentationResults:
         """Main processing pipeline for market segmentation"""
@@ -23,8 +33,56 @@ class SegmentationEngine:
         market_insights = {}
         quality_data = {}
         
-        # Phase 1: Data Collection
-        with st.status("🔍 Collecting comprehensive market data...", expanded=True) as status:
+        # Phase 1: Enhanced Data Validation & Processing (NEW)
+        with st.status("📋 Validating and processing enhanced questionnaire data...", expanded=True) as status:
+            st.write("**What's happening:** Validating PRD compliance and extracting business intelligence")
+            
+            # Process enhanced questionnaire data
+            questionnaire_results = asyncio.run(
+                self.enhanced_questionnaire_service.process_inputs(user_inputs)
+            )
+            
+            # Show validation results
+            validation = questionnaire_results['validation_results']
+            completeness_score = validation['completeness_score']
+            
+            st.write("**📊 PRD Compliance Analysis:**")
+            
+            # Show completeness score with color coding
+            if completeness_score >= 80:
+                st.success(f"✅ Excellent data completeness: {completeness_score:.1f}%")
+            elif completeness_score >= 60:
+                st.warning(f"⚠️ Good data completeness: {completeness_score:.1f}% (some enhancements possible)")
+            else:
+                st.error(f"❌ Data completeness needs improvement: {completeness_score:.1f}%")
+            
+            # Show missing critical fields if any
+            if validation['missing_critical']:
+                st.error(f"**Missing critical fields (⭐⭐⭐):** {', '.join(validation['missing_critical'])}")
+            
+            if validation['missing_important']:
+                st.warning(f"**Missing important fields (⭐⭐):** {', '.join(validation['missing_important'])}")
+            
+            # Show what was collected
+            business_context = questionnaire_results['business_context']
+            st.write("**✅ Successfully collected:**")
+            if 'b2b_context' in business_context:
+                st.write(f"• B2B Industry targeting: {len(business_context['b2b_context']['industry_targeting']['company_types'])} company types")
+                st.write(f"• Buyer dynamics: {len(business_context['b2b_context']['buyer_dynamics']['decision_makers'])} decision maker roles")
+                st.write(f"• Lead sources: {len(business_context['b2b_context']['go_to_market']['lead_sources'])} channels")
+            
+            if 'b2c_context' in business_context:
+                st.write(f"• C2C Target customer: {business_context['b2c_context']['target_customer']['primary_customer']}")
+                st.write(f"• Buying behavior: {len(business_context['b2c_context']['buying_behavior'])} behavior factors")
+                st.write(f"• Discovery channels: {len(business_context['b2c_context']['product_market_fit']['discovery_channels'])} channels")
+            
+            # Store for later use
+            self.questionnaire_analysis = questionnaire_results
+            
+            st.success("✅ Enhanced questionnaire data processed successfully")
+        
+        # Phase 2: Automated Market Research (30-minute pipeline)
+        with st.status("🔍 Executing 30-minute automated market research pipeline...", expanded=True) as status:
             st.write("**What's happening:** Executing deep market research with multiple search layers")
             
             if self.enhanced_search_service:
@@ -101,7 +159,7 @@ class SegmentationEngine:
                 )
                 st.write("✅ Basic market data collected")
         
-        # Phase 2: Market Analysis
+        # Phase 3: Market Analysis
         with st.status("📊 Analyzing market landscape with Claude AI...", expanded=True) as status:
             st.write("**What's happening:** Claude is analyzing all collected data to understand your market")
             
@@ -163,8 +221,75 @@ class SegmentationEngine:
                 if hasattr(market_analysis, 'key_competitors') and market_analysis.key_competitors:
                     st.write(f"• Competitors Found: {len(market_analysis.key_competitors)}")
         
-        # Phase 3: Segment Identification
-        with st.status("🎯 Identifying market segments with Claude AI...", expanded=True) as status:
+        # Phase 4: JTBD Framework Analysis (NEW)
+        with st.status("🎯 Analyzing Jobs-To-Be-Done framework for role-specific insights...", expanded=True) as status:
+            st.write("**What's happening:** Implementing comprehensive JTBD analysis for 6 key business roles")
+            
+            # Extract business context from questionnaire analysis
+            business_context = self.questionnaire_analysis['business_context']
+            
+            # Show JTBD methodology
+            st.write("**🔬 JTBD Analysis Framework:**")
+            if user_inputs.b2b_inputs:
+                st.write("• **B2B Role Analysis:** Cybersecurity Specialist, IT Manager, Operations Manager, MSP/MSSP, Developer, SOC Analyst")
+                st.write("• **Functional Jobs:** 'I need to _____ so I can _____'")
+                st.write("• **Emotional Jobs:** 'I want to feel _____ when I use this'")
+                st.write("• **Social Jobs:** 'I want others to see me as _____'")
+                st.write("• **Trigger Events:** Commercial urgencies and timing factors")
+                st.write("• **Current Workarounds:** Existing solutions and pain points")
+                st.write("• **Decision Journey:** B2B buying process and stakeholder involvement")
+            else:
+                st.write("• **Customer Jobs:** Functional, emotional, and social job mapping")
+                st.write("• **Buying Triggers:** Situational and emotional purchase drivers")
+                st.write("• **Decision Journey:** Customer decision process and touchpoints")
+                st.write("• **Psychographic Analysis:** Values, lifestyle, and behavioral insights")
+            
+            # Perform JTBD analysis
+            start_time = time.time()
+            jtbd_analysis = asyncio.run(
+                self.jtbd_service.analyze_jtbd_framework(user_inputs, business_context)
+            )
+            elapsed_time = time.time() - start_time
+            
+            # Display JTBD results
+            st.write("**✅ JTBD Analysis Results:**")
+            
+            if jtbd_analysis['framework_type'] == 'B2B':
+                role_analyses = jtbd_analysis['role_analyses']
+                st.write(f"• **Roles Analyzed:** {len(role_analyses)} key business roles")
+                
+                # Show role-specific insights
+                for role_key, role_data in role_analyses.items():
+                    if isinstance(role_data, dict) and 'title' in str(role_data):
+                        st.write(f"  - {role_key.replace('_', ' ').title()}: Functional, emotional, and social job mapping")
+                
+                # Show decision journey insights
+                if 'decision_journey_map' in jtbd_analysis:
+                    st.write("• **Decision Journey:** 5-phase B2B buying process mapped")
+                
+                # Show trigger calendar
+                if 'trigger_events_calendar' in jtbd_analysis:
+                    triggers = jtbd_analysis['trigger_events_calendar']
+                    total_triggers = sum(len(trigger_list) for trigger_list in triggers.values())
+                    st.write(f"• **Trigger Events:** {total_triggers} timing factors identified")
+                
+            elif jtbd_analysis['framework_type'] == 'B2C':
+                st.write("• **Customer JTBD:** Functional, emotional, and social job analysis completed")
+                st.write("• **Decision Journey:** 5-stage customer journey mapped")
+                st.write("• **Psychographic Profile:** Values, lifestyle, and behavioral insights")
+                
+                if 'trigger_events_calendar' in jtbd_analysis:
+                    triggers = jtbd_analysis['trigger_events_calendar']
+                    total_triggers = sum(len(trigger_list) for trigger_list in triggers.values())
+                    st.write(f"• **Purchase Triggers:** {total_triggers} buying triggers categorized")
+            
+            # Store JTBD analysis for later use
+            self.jtbd_analysis = jtbd_analysis
+            
+            st.success(f"✅ JTBD framework analysis completed in {elapsed_time:.1f} seconds")
+        
+        # Phase 5: Segment Identification
+        with st.status("🎯 Identifying market segments with enhanced JTBD insights...", expanded=True) as status:
             st.write("**What's happening:** Claude is identifying distinct customer groups based on patterns in the data")
             
             # Show segmentation methodology
@@ -195,7 +320,7 @@ class SegmentationEngine:
             for i, segment in enumerate(segments, 1):
                 st.write(f"• **Segment {i}:** {segment.name} ({segment.size_percentage}% of market)")
         
-        # Phase 4: Persona Generation
+        # Phase 6: Persona Generation
         with st.status("👥 Creating detailed personas with Claude AI...", expanded=True) as status:
             st.write("**What's happening:** Claude is creating realistic buyer personas for each segment")
             
@@ -249,7 +374,141 @@ class SegmentationEngine:
             progress_bar.progress(1.0)
             st.success(f"✅ All {len(segments)} personas created in {total_time:.1f} seconds")
         
-        # Phase 5: Implementation Planning
+        # Phase 7: GTM Strategy Development (NEW)
+        with st.status("🚀 Developing comprehensive Go-to-Market strategy...", expanded=True) as status:
+            st.write("**What's happening:** Creating messaging frameworks, campaign plans, and sales enablement")
+            
+            # Show GTM strategy components
+            st.write("**📋 GTM Strategy Framework:**")
+            st.write("• **Messaging Framework:** Value propositions, message house, compelling hooks")
+            st.write("• **Campaign Planning:** 30/60/90-day campaign roadmaps")
+            st.write("• **Sales Enablement:** Objection handling, ROI calculators, battlecards")
+            st.write("• **Channel Strategy:** Multi-channel recommendations and budget allocation")
+            st.write("• **Competitive Positioning:** Differentiation and competitive responses")
+            
+            # Develop comprehensive GTM strategy
+            start_time = time.time()
+            
+            # Create messaging framework first
+            progress_text = st.empty()
+            progress_text.write("💬 Creating messaging frameworks...")
+            
+            messaging_framework = asyncio.run(
+                self.messaging_service.create_messaging_framework(
+                    user_inputs, business_context, self.jtbd_analysis, 
+                    enhanced_segments, market_analysis
+                )
+            )
+            
+            progress_text.write("🎯 Developing GTM strategy...")
+            
+            # Develop full GTM strategy
+            gtm_strategy = asyncio.run(
+                self.gtm_strategy_service.develop_gtm_strategy(
+                    user_inputs, business_context, self.jtbd_analysis,
+                    market_analysis, enhanced_segments
+                )
+            )
+            
+            elapsed_time = time.time() - start_time
+            progress_text.empty()
+            
+            # Display GTM strategy results
+            st.write("**✅ GTM Strategy Results:**")
+            
+            # Show messaging framework highlights
+            if 'messaging_framework' in gtm_strategy:
+                messaging = gtm_strategy['messaging_framework']
+                if 'segment_messaging' in messaging:
+                    segment_count = len(messaging['segment_messaging'])
+                    st.write(f"• **Segment Messaging:** {segment_count} segment-specific value propositions")
+                
+                if 'message_house' in messaging:
+                    st.write("• **Message House:** Core pillars and supporting points created")
+            
+            # Show campaign planning highlights
+            if 'campaign_planning' in gtm_strategy:
+                campaigns = gtm_strategy['campaign_planning']
+                st.write("• **Campaign Plans:** 30/60/90-day phased campaign roadmaps")
+                
+                if 'channel_strategy' in campaigns:
+                    st.write("• **Channel Strategy:** Multi-channel mix and budget allocation")
+            
+            # Show sales enablement highlights
+            if 'sales_enablement' in gtm_strategy:
+                st.write("• **Sales Enablement:** Complete toolkit with scripts and calculators")
+            
+            # Show competitive positioning
+            if 'competitive_positioning' in gtm_strategy:
+                st.write("• **Competitive Positioning:** Differentiation strategy and messaging")
+            
+            # Store GTM strategy for later use
+            self.gtm_strategy = gtm_strategy
+            self.messaging_framework = messaging_framework
+            
+            st.success(f"✅ Comprehensive GTM strategy developed in {elapsed_time:.1f} seconds")
+        
+        # Phase 8: Advanced Competitive Intelligence (NEW)
+        with st.status("🏆 Conducting advanced competitive intelligence analysis...", expanded=True) as status:
+            st.write("**What's happening:** Deep competitive analysis with business metrics and feature comparison")
+            
+            # Show competitive intelligence components
+            st.write("**🔍 Competitive Intelligence Framework:**")
+            st.write("• **Detailed Competitor Profiling:** Business metrics, funding, regions, GTM strategies")
+            st.write("• **Feature Comparison Matrix:** 'Us vs Them' comprehensive analysis")
+            st.write("• **Market Overlap Analysis:** White space identification and competitive threats")
+            st.write("• **Pricing Intelligence:** Competitive pricing strategies and positioning")
+            st.write("• **Positioning Recommendations:** Strategic differentiation and messaging")
+            
+            # Perform advanced competitive intelligence analysis
+            start_time = time.time()
+            
+            progress_text = st.empty()
+            progress_text.write("🔍 Identifying and analyzing competitors...")
+            
+            competitive_intelligence = asyncio.run(
+                self.competitive_intelligence_service.analyze_competitive_landscape(
+                    user_inputs, business_context, market_analysis, enhanced_segments
+                )
+            )
+            
+            elapsed_time = time.time() - start_time
+            progress_text.empty()
+            
+            # Display competitive intelligence results
+            st.write("**✅ Competitive Intelligence Results:**")
+            
+            # Show competitor profiles
+            if 'competitor_profiles' in competitive_intelligence:
+                profiles = competitive_intelligence['competitor_profiles']
+                if isinstance(profiles, list):
+                    competitor_count = len(profiles)
+                else:
+                    competitor_count = len(profiles) if hasattr(profiles, '__len__') else 'Multiple'
+                st.write(f"• **Competitor Profiles:** {competitor_count} detailed profiles with business metrics")
+            
+            # Show feature comparison
+            if 'feature_comparison_matrix' in competitive_intelligence:
+                st.write("• **Feature Comparison:** Comprehensive 'Us vs Them' analysis completed")
+            
+            # Show market overlap analysis
+            if 'market_overlap_analysis' in competitive_intelligence:
+                st.write("• **Market Overlap:** White space opportunities and competitive threats identified")
+            
+            # Show pricing intelligence
+            if 'pricing_intelligence' in competitive_intelligence:
+                st.write("• **Pricing Intelligence:** Competitive pricing strategies and positioning analyzed")
+            
+            # Show positioning recommendations
+            if 'positioning_recommendations' in competitive_intelligence:
+                st.write("• **Positioning Strategy:** Differentiation and competitive response framework")
+            
+            # Store competitive intelligence for later use
+            self.competitive_intelligence = competitive_intelligence
+            
+            st.success(f"✅ Advanced competitive intelligence completed in {elapsed_time:.1f} seconds")
+        
+        # Phase 9: Implementation Planning
         with st.status("📋 Generating implementation roadmap...", expanded=True) as status:
             st.write("**What's happening:** Creating actionable go-to-market recommendations")
             
