@@ -126,7 +126,7 @@ class GTMStrategyService:
             Create a comprehensive messaging framework for this market segment:
 
             Segment: {segment.name}
-            Description: {segment.description}
+            Description: {getattr(segment, 'persona_description', 'No description available')}
             Size: {segment.size_percentage}% of market
             Key Characteristics: {segment.characteristics}
             Pain Points: {segment.pain_points}
