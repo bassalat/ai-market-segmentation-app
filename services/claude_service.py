@@ -9,6 +9,16 @@ class ClaudeService:
     def __init__(self):
         self.client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     
+    async def get_completion(self, prompt: str, max_tokens: int = 4000) -> str:
+        """Generic method for getting Claude completions - used by new enhanced services"""
+        response = self.client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        return response.content[0].text
+    
     def analyze_market(self, user_inputs: UserInputs, search_results: str = "") -> MarketAnalysis:
         prompt = self._build_market_analysis_prompt(user_inputs, search_results)
         
