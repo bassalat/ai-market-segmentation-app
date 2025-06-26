@@ -2,27 +2,38 @@
 
 ## Overview
 
-The AI Market Segmentation Web App is a comprehensive tool that leverages Claude Sonnet 4 to transform traditional market analysis into an automated, data-driven segmentation process. This document outlines the detailed methodology and workflow for the GTM team.
+The AI Market Segmentation Web App is a professional-grade market research platform that leverages Claude Sonnet 4 to transform traditional market analysis into an automated, academically-rigorous segmentation process. This comprehensive tool combines real-time web research, user document analysis, and AI-powered insights to deliver research-quality market intelligence with full source attribution.
 
 ## Key Benefits for GTM Teams
 
+### **Core Capabilities**
 - **Speed**: Complete market segmentation in 5-10 minutes vs. weeks of manual research
-- **Consistency**: Standardized methodology across all product lines and markets
-- **Depth**: AI-powered insights combining multiple data sources and frameworks
-- **Competitive Intelligence**: Real-time competitor analysis with funding and positioning data
-- **Role-Based Targeting**: Specific pain points mapped to business roles and stakeholders
-- **Market Dynamics**: Industry growth factors, CAGR, and commercial urgencies
-- **Actionability**: Ready-to-implement personas with messaging and channel recommendations
-- **Documentation**: Professional reports for stakeholder alignment and strategy documentation
+- **Academic Rigor**: Research-grade analysis with comprehensive source citations and bibliography
+- **Personalization**: Integrates user's own business data (PDFs, CSV, Excel) for context-aware analysis
+- **Global Reach**: Support for 90+ countries in geographic targeting
+
+### **Advanced Intelligence**
+- **Source Transparency**: 4-tier source quality system with visual indicators (★★★★★)
+- **Comprehensive Citations**: APA-format bibliography with 20+ sources per analysis
+- **Document Processing**: Upload and integrate PDFs, CSV, Excel files for enhanced context
+- **Quality Scoring**: Multi-factor validation with confidence intervals and cross-validation
+
+### **Professional Output**
+- **Research-Grade Reports**: Academic-level documentation suitable for executive presentations
+- **Competitive Intelligence**: Enhanced SWOT analysis with funding data and strategic positioning
+- **Implementation Ready**: Role-specific targeting with 90+ country support
+- **Full Attribution**: Complete source tracking from web research to final insights
 
 ## Process Flow
 
 ```mermaid
 flowchart TD
     A[Start: Landing Page] --> B[Business Information Input]
-    B --> C{Business Model Selection}
+    B --> B1[Document Upload: PDF/CSV/Excel]
+    B1 --> B2[Document Processing & Analysis]
+    B2 --> C{Business Model Selection}
     
-    C -->|B2B| D[B2B Questionnaire]
+    C -->|B2B| D[B2B Questionnaire + 90+ Countries]
     C -->|B2C| E[B2C Questionnaire]
     C -->|Both| F[Combined Questionnaire]
     
@@ -30,14 +41,15 @@ flowchart TD
     E --> G
     F --> G
     
-    G --> H[Phase 1: Enhanced Deep Search]
-    H --> I[25+ Targeted Search Queries]
-    H --> J[Web Scraping Top Results]
-    H --> K[Multi-Source Data Aggregation]
+    G --> H[Phase 1: Enhanced Deep Search + Source Tracking]
+    H --> I[25+ Targeted Search Queries with Quality Scoring]
+    H --> J[Web Scraping with Authority Validation]
+    H --> K[Multi-Source Data Aggregation + Citations]
     
-    I --> L[Claude AI: Market Analysis]
+    I --> L[Claude AI: Context-Aware Market Analysis]
     J --> L
     K --> L
+    B2 --> L[User Document Context Integration]
     
     L --> M[Phase 2: Market Intelligence]
     M --> N[Market Size Validation & CAGR]
@@ -97,7 +109,7 @@ flowchart TD
 - Target industries and verticals
 - Deal size ranges and sales cycle length
 - Decision maker roles and stakeholders
-- Geographic focus areas
+- Geographic focus areas (90+ countries supported)
 - Primary pain points and use cases
 
 **B2C Specific Data**:
@@ -107,7 +119,37 @@ flowchart TD
 - Customer motivations and lifestyle preferences
 - Psychographic characteristics
 
-#### 1.2 Enhanced Deep Search & Market Research
+#### 1.2 Document Context Integration (Optional)
+**Duration**: 2-5 minutes  
+**Responsible**: GTM Team Member
+**File Types**: PDF, CSV, Excel (multi-file support)
+
+**Document Processing Capabilities**:
+- **PDF Analysis**: Extracts text from market reports, business plans, research documents
+  - Page-by-page text extraction with error handling
+  - Market size detection ($X billion, growth rates)
+  - Competitor mention identification
+  - Key insight extraction using pattern recognition
+  
+- **CSV/Excel Analysis**: Processes structured business data
+  - Automatic market column identification (revenue, growth, customers)
+  - Statistical analysis (mean, median, min/max for numeric data)
+  - Category distribution analysis for categorical data
+  - Multi-sheet Excel support with comprehensive analysis
+  
+- **Intelligent Context Extraction**:
+  - Market-relevant insight identification
+  - Geographic and demographic data recognition
+  - Financial metrics and growth pattern analysis
+  - Competitive landscape information extraction
+
+**Quality Assessment**:
+- User documents assigned Tier 2 source quality (★★★★☆)
+- High confidence scores due to business relevance
+- Comprehensive content summarization and statistics
+- Integration verification and validation checks
+
+#### 1.3 Enhanced Deep Search & Market Research
 **Duration**: 30-60 seconds  
 **Responsible**: AI System with Serper.dev Integration
 
@@ -115,8 +157,22 @@ flowchart TD
 - **25+ Targeted Searches**: Comprehensive query coverage across multiple categories
 - **Web Scraping**: Full-page content extraction from authoritative sources
 - **Parallel Processing**: Concurrent search execution for speed
-- **Quality Scoring**: Confidence metrics for all data points
-- **Relevance Validation**: Industry-specific keyword matching
+- **Comprehensive Source Tracking**: Complete metadata for every search result
+- **4-Tier Quality Classification**: Automatic source authority assessment
+
+**Source Quality System**:
+- **Tier 1 (★★★★★)**: Academic, Government, Major Research (Gartner, McKinsey, .edu, .gov)
+- **Tier 2 (★★★★☆)**: Industry Reports, Major Publications (Bloomberg, Reuters, WSJ)
+- **Tier 3 (★★★☆☆)**: Company Blogs, Trade Publications (Medium, TechCrunch)
+- **Tier 4 (★★☆☆☆)**: Social Media, Forums, Unverified Sources
+
+**Enhanced Data Attribution**:
+- **Publication Date Extraction**: Automatic date detection from search results
+- **Author & Organization Mapping**: 15+ major organizations automatically identified
+- **Domain Authority Scoring**: 0-100 scale with comprehensive database
+- **Content Type Classification**: 10 categories (Academic Paper, Industry Report, etc.)
+- **Geographic Focus Detection**: Country and regional scope identification
+- **Confidence Scoring**: Multi-factor algorithms for reliability assessment
 
 **Search Categories**:
 - Market size and TAM analysis with validation
@@ -127,10 +183,11 @@ flowchart TD
 
 **Data Quality Metrics**:
 - Overall quality score with confidence levels
-- Source authority validation
+- Source authority validation with visual indicators
 - Recency checks (prioritizing 2024-2025 data)
 - Market size sanity checks and validation
-- Relevance scoring for industry alignment
+- Cross-source validation and triangulation
+- Comprehensive bibliography generation
 
 ### Phase 2: Enhanced Market Intelligence
 
@@ -291,34 +348,53 @@ For each identified segment, the AI creates:
 - **Data Processing**: Multi-layer validation and confidence scoring
 - **Market Validation**: Sanity checks for market size and growth rates
 
-### Search & Data Quality
-- **Search Volume**: 25+ targeted queries across 5 categories
-- **Data Sources**: 20+ authoritative sources per analysis
-- **Content Analysis**: 50,000+ characters of deep content extraction
-- **Confidence Scoring**: Multi-factor validation for all data points
-- **Industry Relevance**: Dynamic keyword matching for accuracy
+### Document Processing Intelligence
+- **Multi-Format Support**: PDF, CSV, Excel with intelligent content extraction
+- **Smart Analysis**: Market column detection, statistical analysis, insight extraction
+- **Quality Integration**: User documents assigned Tier 2 source quality
+- **Context Awareness**: Seamless integration into all AI analysis phases
+- **Real-time Processing**: Immediate feedback and analysis results
 
-### AI Analysis Transparency
-- **Real-time Progress**: Detailed visibility into each analysis phase
-- **Search Statistics**: Queries executed, sources analyzed, pages scraped
-- **AI Methodology**: Expandable explanations of AI processes
-- **Quality Metrics**: Data quality scores and confidence levels
-- **Timing Analytics**: Performance metrics for each phase
+### Enhanced Search & Data Quality
+- **Search Volume**: 25+ targeted queries with comprehensive source tracking
+- **Data Sources**: 20+ authoritative sources with complete metadata attribution
+- **Source Quality System**: 4-tier classification with visual quality indicators
+- **Content Analysis**: 50,000+ characters with full citation tracking
+- **Confidence Scoring**: Multi-factor validation with cross-source verification
+- **Bibliography Generation**: Automatic APA-format citations and research documentation
 
-### Output Quality Assurance
-- **Market Size Validation**: Prevents unrealistic values (e.g., trillions for niche markets)
-- **Growth Rate Limits**: Caps at reasonable percentages (100% max)
-- **Relevance Filtering**: Industry-specific keyword validation
-- **Confidence Levels**: High/Medium/Low ratings for market data
-- **Error Recovery**: Automatic retry logic for failed processes
+### Academic-Level Attribution
+- **Complete Source Tracking**: Every data point traced to original sources
+- **Publication Dating**: Automatic extraction and validation of publication dates
+- **Author Recognition**: 15+ major organizations automatically identified
+- **Domain Authority**: 0-100 scoring with comprehensive authority database
+- **Geographic Tagging**: Country and regional focus identification for all sources
+- **Content Classification**: 10 content types with intelligent categorization
+
+### Research Quality Assurance
+- **Cross-Validation**: Multiple sources required for key market data
+- **Confidence Intervals**: Statistical confidence levels for all metrics
+- **Source Diversity**: Quality scoring based on source variety and authority
+- **Recency Validation**: Prioritization of 2024-2025 data with date verification
+- **Market Size Validation**: Prevents unrealistic values with sanity checks
+- **Error Recovery**: Automatic retry logic with source quality preservation
 
 ## Best Practices for GTM Teams
 
 ### 1. Input Quality
 - **Be Specific**: Detailed business descriptions yield better segments
 - **Include Context**: Mention current challenges and growth goals
-- **Geographic Clarity**: Specify primary and secondary markets
+- **Geographic Clarity**: Specify primary and secondary markets from 90+ countries
 - **Competitive Awareness**: Note key competitors if known
+- **Upload Documents**: Provide PDFs, CSV, Excel files for enhanced context and personalization
+
+### 1.1 Document Upload Best Practices
+- **Market Reports**: Upload industry reports, market research, competitive analysis documents
+- **Customer Data**: Include CSV/Excel files with customer segments, revenue data, geographic distribution
+- **Business Plans**: Provide strategic documents that contain market positioning and target customer information
+- **Financial Data**: Upload financial reports, growth metrics, market performance data
+- **Survey Results**: Include customer feedback, market research surveys, and behavioral data
+- **File Organization**: Use descriptive filenames and ensure data quality before upload
 
 ### 2. Results Interpretation
 - **Validate Segments**: Cross-reference with existing customer data
