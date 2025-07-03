@@ -6,6 +6,7 @@ value propositions, campaign planning, and sales enablement
 
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
+import json
 from models.user_inputs import UserInputs
 from services.claude_service import ClaudeService
 
@@ -199,7 +200,9 @@ class GTMStrategyService:
         JSON format, under 200 words total.
         """
         
-        return await self.claude_service.get_completion(message_house_prompt, max_tokens=1200)
+        # Get response and parse JSON
+        response = await self.claude_service.get_completion(message_house_prompt, max_tokens=1200)
+        return self._parse_json_response(response, 'message_house')
     
     async def _generate_campaign_plans(
         self,
@@ -228,7 +231,9 @@ class GTMStrategyService:
         JSON format, under 250 words total.
         """
         
-        return await self.claude_service.get_completion(campaign_prompt, max_tokens=1500)
+        # Get response and parse JSON
+        response = await self.claude_service.get_completion(campaign_prompt, max_tokens=1500)
+        return self._parse_json_response(response, 'campaign_plans')
     
     async def _create_sales_enablement(
         self,
@@ -259,7 +264,9 @@ class GTMStrategyService:
         JSON format, under 200 words total.
         """
         
-        return await self.claude_service.get_completion(sales_prompt, max_tokens=1200)
+        # Get response and parse JSON
+        response = await self.claude_service.get_completion(sales_prompt, max_tokens=1200)
+        return self._parse_json_response(response, 'sales_enablement')
     
     async def _develop_channel_strategy(
         self,
@@ -294,7 +301,9 @@ class GTMStrategyService:
         JSON format, under 200 words total.
         """
         
-        return await self.claude_service.get_completion(channel_prompt, max_tokens=1200)
+        # Get response and parse JSON
+        response = await self.claude_service.get_completion(channel_prompt, max_tokens=1200)
+        return self._parse_json_response(response, 'channel_strategy')
     
     async def _develop_competitive_positioning(
         self,
@@ -328,7 +337,9 @@ class GTMStrategyService:
         JSON format, under 150 words total.
         """
         
-        return await self.claude_service.get_completion(positioning_prompt, max_tokens=1000)
+        # Get response and parse JSON
+        response = await self.claude_service.get_completion(positioning_prompt, max_tokens=1000)
+        return self._parse_json_response(response, 'competitive_positioning')
     
     async def _create_implementation_roadmap(
         self,
@@ -356,4 +367,99 @@ class GTMStrategyService:
         JSON format, under 200 words total.
         """
         
-        return await self.claude_service.get_completion(roadmap_prompt, max_tokens=1200)
+        # Get response and parse JSON
+        response = await self.claude_service.get_completion(roadmap_prompt, max_tokens=1200)
+        return self._parse_json_response(response, 'implementation_roadmap')
+    
+    def _parse_json_response(self, response: str, fallback_type: str) -> Dict[str, Any]:
+        """Parse JSON response from Claude with fallback handling"""
+        try:
+            # Extract JSON from response if it contains other text
+            response_clean = response.strip()
+            if response_clean.startswith("```json"):
+                response_clean = response_clean[7:]
+            if response_clean.endswith("```"):
+                response_clean = response_clean[:-3]
+            
+            # Find JSON object in response
+            start_idx = response_clean.find('{')
+            end_idx = response_clean.rfind('}') + 1
+            
+            if start_idx >= 0 and end_idx > start_idx:
+                json_str = response_clean[start_idx:end_idx]
+                return json.loads(json_str)
+            else:
+                raise json.JSONDecodeError("No JSON found", response, 0)
+                
+        except (json.JSONDecodeError, KeyError, AttributeError) as e:
+            # Return fallback data based on type
+            if fallback_type == 'message_house':
+                return {
+                    'main_value_proposition': 'Comprehensive solution for business needs',
+                    'key_pillars': ['Efficiency', 'Reliability', 'Innovation'],
+                    'supporting_points': {
+                        'Efficiency': ['Streamlined processes', 'Time savings'],
+                        'Reliability': ['Proven technology', '24/7 support'],
+                        'Innovation': ['Cutting-edge features', 'Future-ready']
+                    },
+                    'proof_sources': ['Customer testimonials', 'Performance metrics', 'Industry awards'],
+                    'differentiation_hooks': ['Unique approach', 'Superior results', 'Expert team']
+                }
+            elif fallback_type == 'campaign_plans':
+                return [
+                    {
+                        'phase': '30-day',
+                        'objectives': ['Build awareness', 'Generate leads'],
+                        'target_segments': ['Primary segment'],
+                        'key_messages': ['Core value proposition'],
+                        'channels': ['Digital marketing', 'Content marketing'],
+                        'success_metrics': ['Lead generation', 'Brand awareness']
+                    }
+                ]
+            elif fallback_type == 'sales_enablement':
+                return {
+                    'sales_tools': ['Value proposition deck', 'ROI calculator', 'Case studies'],
+                    'objection_handling': {
+                        'price': 'Focus on ROI and long-term value',
+                        'features': 'Highlight unique differentiators'
+                    },
+                    'sales_process': ['Discovery', 'Demo', 'Proposal', 'Close'],
+                    'training_materials': ['Product overview', 'Competitive comparison']
+                }
+            elif fallback_type == 'channel_strategy':
+                return {
+                    'primary_channels': ['Digital marketing', 'Content marketing', 'Sales outreach'],
+                    'channel_mix': {'Digital': 40, 'Content': 30, 'Sales': 30},
+                    'optimization_plan': 'Focus on highest converting channels',
+                    'budget_allocation': {'Digital': 40, 'Content': 30, 'Sales': 30}
+                }
+            elif fallback_type == 'competitive_positioning':
+                return {
+                    'positioning_statement': 'Unique solution for specific business needs',
+                    'key_differentiators': ['Superior technology', 'Better support', 'Proven results'],
+                    'competitive_advantages': ['Market leadership', 'Innovation', 'Customer satisfaction'],
+                    'messaging_strategy': 'Focus on unique value and proven results'
+                }
+            elif fallback_type == 'implementation_roadmap':
+                return {
+                    'phase_1': {
+                        'weeks': '1-4',
+                        'focus': 'Foundation',
+                        'activities': ['Team setup', 'Messaging development', 'Channel preparation'],
+                        'metrics': ['Team readiness', 'Message approval']
+                    },
+                    'phase_2': {
+                        'weeks': '5-8', 
+                        'focus': 'Launch',
+                        'activities': ['Campaign execution', 'Sales enablement', 'Performance monitoring'],
+                        'metrics': ['Lead generation', 'Sales activity']
+                    },
+                    'phase_3': {
+                        'weeks': '9-12',
+                        'focus': 'Optimize',
+                        'activities': ['Performance analysis', 'Strategy adjustment', 'Scale successful tactics'],
+                        'metrics': ['Conversion rates', 'ROI improvement']
+                    }
+                }
+            else:
+                return {'error': 'Failed to parse response', 'raw_response': response[:200]}

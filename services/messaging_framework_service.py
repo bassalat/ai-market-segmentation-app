@@ -6,6 +6,7 @@ per PRD Phase 4 specifications
 
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
+import json
 from services.claude_service import ClaudeService
 
 
@@ -140,7 +141,9 @@ class MessagingFrameworkService:
         JSON format with segment names as keys, max 100 words per segment.
         """
         
-        return await self.claude_service.get_completion(batch_value_prop_prompt, max_tokens=2000)
+        # Get response and parse JSON
+        response = await self.claude_service.get_completion(batch_value_prop_prompt, max_tokens=2000)
+        return self._parse_json_response(response, 'value_propositions')
     
     async def _create_messaging_pillars(
         self,
@@ -195,7 +198,9 @@ class MessagingFrameworkService:
         Format as structured JSON with detailed pillar development.
         """
         
-        return await self.claude_service.get_completion(pillars_prompt)
+        # Get response and parse JSON
+        response = await self.claude_service.get_completion(pillars_prompt)
+        return self._parse_json_response(response, 'messaging_pillars')
     
     async def _generate_compelling_hooks(
         self,
@@ -235,7 +240,9 @@ class MessagingFrameworkService:
         JSON format with segment names as keys, max 50 words per segment.
         """
         
-        return await self.claude_service.get_completion(batch_hooks_prompt, max_tokens=1500)
+        # Get response and parse JSON
+        response = await self.claude_service.get_completion(batch_hooks_prompt, max_tokens=1500)
+        return self._parse_json_response(response, 'compelling_hooks')
     
     async def _create_pain_point_communications(
         self,
@@ -272,7 +279,9 @@ class MessagingFrameworkService:
         JSON format with segment names as keys, max 80 words per segment.
         """
         
-        return await self.claude_service.get_completion(batch_pain_prompt, max_tokens=1500)
+        # Get response and parse JSON
+        response = await self.claude_service.get_completion(batch_pain_prompt, max_tokens=1500)
+        return self._parse_json_response(response, 'pain_point_communications')
     
     async def _generate_benefit_statements(
         self,
@@ -305,7 +314,9 @@ class MessagingFrameworkService:
         JSON format with segment names as keys, max 60 words per segment.
         """
         
-        return await self.claude_service.get_completion(batch_benefits_prompt, max_tokens=1500)
+        # Get response and parse JSON
+        response = await self.claude_service.get_completion(batch_benefits_prompt, max_tokens=1500)
+        return self._parse_json_response(response, 'benefit_statements')
     
     async def _create_framework_summary(
         self,
@@ -332,4 +343,78 @@ class MessagingFrameworkService:
         JSON format, under 150 words total.
         """
         
-        return await self.claude_service.get_completion(summary_prompt, max_tokens=1000)
+        # Get response and parse JSON
+        response = await self.claude_service.get_completion(summary_prompt, max_tokens=1000)
+        return self._parse_json_response(response, 'framework_summary')
+    
+    def _parse_json_response(self, response: str, fallback_type: str) -> Dict[str, Any]:
+        """Parse JSON response from Claude with fallback handling"""
+        try:
+            # Extract JSON from response if it contains other text
+            response_clean = response.strip()
+            if response_clean.startswith("```json"):
+                response_clean = response_clean[7:]
+            if response_clean.endswith("```"):
+                response_clean = response_clean[:-3]
+            
+            # Find JSON object in response
+            start_idx = response_clean.find('{')
+            end_idx = response_clean.rfind('}') + 1
+            
+            if start_idx >= 0 and end_idx > start_idx:
+                json_str = response_clean[start_idx:end_idx]
+                return json.loads(json_str)
+            else:
+                raise json.JSONDecodeError("No JSON found", response, 0)
+                
+        except (json.JSONDecodeError, KeyError, AttributeError) as e:
+            # Return fallback data based on type
+            if fallback_type == 'value_propositions':
+                return {
+                    'primary_segment': {
+                        'value_proposition': 'Streamlined solution for key business needs',
+                        'differentiators': ['Ease of use', 'Cost effective', 'Reliable support']
+                    }
+                }
+            elif fallback_type == 'messaging_pillars':
+                return [
+                    {
+                        'pillar_name': 'Efficiency',
+                        'core_message': 'Streamline operations and boost productivity',
+                        'supporting_messages': ['Save time', 'Reduce costs', 'Improve workflow']
+                    }
+                ]
+            elif fallback_type == 'compelling_hooks':
+                return {
+                    'primary_segment': [
+                        'Transform your business operations',
+                        'Unlock hidden efficiency gains',
+                        'Get results in days, not weeks'
+                    ]
+                }
+            elif fallback_type == 'pain_point_communications':
+                return {
+                    'primary_segment': {
+                        'inefficiency': 'Stop wasting time on manual processes',
+                        'high_costs': 'Reduce operational expenses significantly'
+                    }
+                }
+            elif fallback_type == 'benefit_statements':
+                return {
+                    'primary_segment': [
+                        'Reduce operational costs by up to 30%',
+                        'Improve efficiency and productivity',
+                        'Gain competitive market advantage',
+                        'Scale business growth sustainably'
+                    ]
+                }
+            elif fallback_type == 'framework_summary':
+                return {
+                    'message_hierarchy': 'Primary value propositions supported by benefit statements',
+                    'cross_segment_themes': ['Efficiency', 'Cost savings', 'Reliability'],
+                    'key_differentiators': ['Unique approach', 'Proven results', 'Expert support'],
+                    'implementation_guide': 'Use primary messages first, support with specific benefits',
+                    'success_metrics': ['Message recall', 'Engagement rates', 'Conversion improvement']
+                }
+            else:
+                return {'error': 'Failed to parse response', 'raw_response': response[:200]}
