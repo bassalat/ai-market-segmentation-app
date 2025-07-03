@@ -436,7 +436,7 @@ class SegmentationEngine:
             )
             
             elapsed_time = time.time() - start_time
-            progress_text.empty()
+            # Progress completed
             
             # Display GTM strategy results
             st.write("**✅ GTM Strategy Results:**")
@@ -488,8 +488,8 @@ class SegmentationEngine:
             # Perform advanced competitive intelligence analysis
             start_time = time.time()
             
-            progress_text = st.empty()
-            progress_text.write("🔍 Identifying and analyzing competitors...")
+            st.write("🔍 Identifying and analyzing competitors...")
+            time.sleep(0.1)
             
             competitive_intelligence = asyncio.run(
                 self.competitive_intelligence_service.analyze_competitive_landscape(
@@ -498,7 +498,7 @@ class SegmentationEngine:
             )
             
             elapsed_time = time.time() - start_time
-            progress_text.empty()
+            # Progress completed
             
             # Display competitive intelligence results
             st.write("**✅ Competitive Intelligence Results:**")
@@ -549,19 +549,20 @@ class SegmentationEngine:
             start_time = time.time()
             
             # Generate implementation components with progress updates
-            progress_text = st.empty()
-            
-            progress_text.write("📊 Analyzing segment priorities...")
+            st.write("📊 Analyzing segment priorities...")
+            time.sleep(0.1)
             implementation_roadmap = self._generate_implementation_roadmap(enhanced_segments)
             
-            progress_text.write("🎯 Identifying quick wins...")
+            st.write("🎯 Identifying quick wins...")
+            time.sleep(0.1)
             quick_wins = self._identify_quick_wins(enhanced_segments)
             
-            progress_text.write("📈 Defining success metrics...")
+            st.write("📈 Defining success metrics...")
+            time.sleep(0.1)
             success_metrics = self._define_success_metrics(enhanced_segments, user_inputs)
             
             elapsed_time = time.time() - start_time
-            progress_text.empty()
+            # Progress completed
             
             # Show summary of recommendations
             st.success(f"✅ Implementation plan ready in {elapsed_time:.1f} seconds")
