@@ -194,104 +194,59 @@ class CompetitiveIntelligenceService:
         business_context: Dict[str, Any],
         user_inputs: Any
     ) -> List[CompetitorProfile]:
-        """Create detailed competitor profiles with business metrics per PRD"""
+        """Create detailed competitor profiles with business metrics per PRD - OPTIMIZED"""
         
-        competitor_profiles = []
+        # MAJOR OPTIMIZATION: Process ALL competitors in a single API call
+        # This reduces token usage from 8-12 separate calls to just 1 call
         
-        # Process competitors in batches to avoid overwhelming the system
-        batch_size = 3
-        for i in range(0, len(competitors), batch_size):
-            batch = competitors[i:i + batch_size]
-            
-            # Search for detailed information about each competitor
-            profile_tasks = []
-            for competitor in batch:
-                profile_tasks.append(
-                    self._create_single_competitor_profile(competitor, business_context)
-                )
-            
-            # Execute profiles in parallel
-            batch_profiles = await asyncio.gather(*profile_tasks, return_exceptions=True)
-            
-            for profile in batch_profiles:
-                if not isinstance(profile, Exception):
-                    competitor_profiles.append(profile)
+        # Limit to top 6 competitors to control token usage
+        top_competitors = competitors[:6] if len(competitors) > 6 else competitors
         
-        return competitor_profiles
+        # Single batch profile creation
+        all_profiles = await self._create_batch_competitor_profiles(top_competitors, business_context)
+        
+        return all_profiles
     
-    async def _create_single_competitor_profile(
+    async def _create_batch_competitor_profiles(
         self,
-        competitor_name: str,
+        competitors: List[str],
         business_context: Dict[str, Any]
-    ) -> CompetitorProfile:
-        """Create detailed profile for a single competitor"""
+    ) -> List[CompetitorProfile]:
+        """Create profiles for all competitors in a single optimized API call"""
         
-        # Search for competitor information if search service available
-        competitor_data = ""
+        # OPTIMIZATION: Single search for all competitors if available
+        all_competitor_data = ""
         if self.search_service:
-            search_query = f"{competitor_name} company funding revenue employees headquarters business model"
-            search_results = await self.search_service.search_web(search_query, max_results=5)
-            competitor_data = search_results
+            search_query = f"{' '.join(competitors)} company profiles funding revenue business models"
+            search_results = await self.search_service.search_web(search_query, max_results=8)
+            all_competitor_data = search_results
         
-        profile_prompt = f"""
-        Create a comprehensive competitor profile for {competitor_name}:
+        # OPTIMIZATION: Condensed context - only essential business info
+        business_summary = {
+            'company': business_context.get('basic_info', {}).get('company_name', 'Unknown'),
+            'industry': business_context.get('basic_info', {}).get('industry', 'Unknown'),
+            'description': business_context.get('basic_info', {}).get('description', 'Unknown')[:200]  # Truncate long descriptions
+        }
+        
+        # OPTIMIZATION: Much shorter, focused prompt
+        batch_prompt = f"""
+        Create competitor profiles for: {', '.join(competitors)}
 
-        Search Data: {competitor_data}
-        Our Business Context: {business_context}
+        Search Data: {all_competitor_data}
+        Our Business: {business_summary}
 
-        Provide detailed profile including all PRD-specified business metrics:
+        For each competitor, provide:
+        1. Company name, HQ, size, founded year
+        2. Revenue range, funding, customers
+        3. Main product focus, target market
+        4. Pricing model, overlap % with us (0-100)
+        5. Key strengths, positioning vs us
 
-        1. BASIC COMPANY INFORMATION:
-           - Company name: {competitor_name}
-           - Headquarters location (city, state/country)
-           - Organization size (employee count range)
-           - Inception/founding year
-           - Current status (startup, growth, mature, public, etc.)
-
-        2. FINANCIAL METRICS:
-           - Annual revenue (or revenue range if public/known)
-           - Total funding raised (if applicable)
-           - Recent funding round details (amount, type, date)
-           - Valuation (if known)
-
-        3. MARKET PRESENCE:
-           - Number of customers/users (if known)
-           - Regions of operation (geographic presence)
-           - Target industries served
-           - Serving size focus (SMB, Mid-Market, Enterprise, Individual)
-
-        4. PRODUCT & POSITIONING:
-           - Product/solution focus and specialty
-           - Key differentiators and unique selling points
-           - Market positioning and messaging themes
-           - Target customer personas
-
-        5. GTM STRATEGY:
-           - Go-to-market approach and positioning
-           - Channel strategy (direct, partner, hybrid)
-           - Sales model (self-serve, sales-led, etc.)
-           - Marketing and customer acquisition approach
-
-        6. PRICING & BUSINESS MODEL:
-           - Pricing model (tiered, user-based, usage-based, etc.)
-           - Pricing transparency (published vs custom)
-           - Business model (SaaS, one-time, freemium, etc.)
-           - Revenue streams
-
-        7. COMPETITIVE ASSESSMENT:
-           - Overlap percentage with our business (0-100%)
-           - Key strengths and competitive advantages
-           - Potential weaknesses or gaps
-           - Market positioning relative to our solution
-
-        If information is not available from search results, provide reasonable estimates 
-        based on company characteristics and industry patterns.
-        Mark uncertain information clearly.
-
-        Format as structured JSON with all specified fields.
+        Keep each profile under 150 words. Format as JSON array.
+        If data unavailable, use reasonable estimates for the industry.
         """
         
-        return await self.claude_service.get_completion(profile_prompt)
+        return await self.claude_service.get_completion(batch_prompt, max_tokens=2000)
     
     async def _generate_feature_comparison(
         self,
@@ -299,58 +254,31 @@ class CompetitiveIntelligenceService:
         business_context: Dict[str, Any],
         user_inputs: Any
     ) -> Dict[str, Any]:
-        """Generate comprehensive feature comparison matrix (Us vs Them)"""
+        """Generate feature comparison matrix - OPTIMIZED"""
+        
+        # OPTIMIZATION: Condensed prompt with only essential comparisons
+        business_summary = {
+            'company': business_context.get('basic_info', {}).get('company_name', 'Unknown'),
+            'description': business_context.get('basic_info', {}).get('description', 'Unknown')[:150]
+        }
         
         comparison_prompt = f"""
-        Create a comprehensive feature comparison matrix:
+        Feature comparison for {business_summary['company']}:
 
-        Our Business: {business_context}
-        User Inputs: {user_inputs}
-        Competitor Profiles: {competitor_profiles}
+        Our Product: {business_summary['description']}
+        Top 3 Competitors: {str(competitor_profiles)[:800]}  # Truncated
 
-        Create detailed "Us vs Them" feature comparison including:
+        Compare in 4 key areas:
+        1. Core Features - What we do vs them
+        2. Pricing - Our model vs theirs
+        3. Target Market - Who we serve vs them
+        4. Key Differentiators - Our advantages
 
-        1. FEATURE CATEGORIES:
-           - Core product capabilities
-           - Integration and connectivity
-           - User experience and interface
-           - Security and compliance
-           - Scalability and performance
-           - Support and services
-           - Pricing and packaging
-           - Implementation and onboarding
-
-        2. COMPARISON MATRIX:
-           For each feature category, compare:
-           - Our capabilities and approach
-           - Each major competitor's capabilities
-           - Relative advantages/disadvantages
-           - Importance to target customers (1-10)
-           - Confidence level in assessment
-
-        3. COMPETITIVE GAPS:
-           - Areas where competitors are stronger
-           - Missing features or capabilities
-           - Innovation opportunities
-           - Investment priorities
-
-        4. COMPETITIVE ADVANTAGES:
-           - Our unique differentiators
-           - Features competitors lack
-           - Superior implementation approaches
-           - Barriers to competitive copying
-
-        5. MARKET REQUIREMENTS:
-           - Must-have vs nice-to-have features
-           - Emerging requirements and trends
-           - Customer feedback and requests
-           - Compliance and regulatory needs
-
-        Include confidence levels for assessments and note information sources.
-        Format as structured JSON with detailed comparison matrix.
+        For each area: rate importance (1-10) and our advantage (Strong/Weak/Neutral).
+        Keep response under 300 words total. JSON format.
         """
         
-        return await self.claude_service.get_completion(comparison_prompt)
+        return await self.claude_service.get_completion(comparison_prompt, max_tokens=1500)
     
     async def _analyze_market_overlap(
         self,
@@ -358,58 +286,29 @@ class CompetitiveIntelligenceService:
         segments: List[Any],
         business_context: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Analyze market overlap and identify white space opportunities"""
+        """Analyze market overlap - OPTIMIZED"""
+        
+        # OPTIMIZATION: Extract only segment names and competitor names
+        segment_names = [getattr(seg, 'name', 'Unknown') for seg in segments[:4]]  # Limit to top 4
+        competitor_names = [prof.get('company_name', 'Unknown') if isinstance(prof, dict) else 'Unknown' for prof in competitor_profiles[:4]]  # Limit to top 4
         
         overlap_prompt = f"""
-        Analyze market overlap and white space opportunities:
+        Market overlap analysis:
 
-        Competitor Profiles: {competitor_profiles}
-        Our Market Segments: {segments}
-        Business Context: {business_context}
+        Our Segments: {segment_names}
+        Main Competitors: {competitor_names}
+        Industry: {business_context.get('basic_info', {}).get('industry', 'Unknown')}
 
-        Provide comprehensive overlap analysis:
+        Analyze:
+        1. Which segments have high/low competition
+        2. White space opportunities (underserved segments)
+        3. Our best differentiation opportunities
+        4. Top 3 strategic recommendations
 
-        1. SEGMENT-LEVEL OVERLAP:
-           For each of our target segments:
-           - Which competitors also target this segment
-           - Intensity of competition (low/medium/high)
-           - Competitor positioning in this segment
-           - Our differentiation opportunities
-
-        2. COMPETITIVE DENSITY MAP:
-           - Segments with high competitive density
-           - Segments with moderate competition
-           - Underserved or white space segments
-           - Emerging segment opportunities
-
-        3. WHITE SPACE IDENTIFICATION:
-           - Market gaps not addressed by competitors
-           - Underserved customer needs
-           - Geographic or vertical opportunities
-           - Use case or application gaps
-
-        4. COMPETITIVE THREATS:
-           - Direct competition risks
-           - Potential market entry threats
-           - Competitive response scenarios
-           - Market share erosion risks
-
-        5. DIFFERENTIATION OPPORTUNITIES:
-           - How to position against each competitor
-           - Unique value propositions
-           - Messaging differentiation
-           - Product differentiation paths
-
-        6. STRATEGIC RECOMMENDATIONS:
-           - Priority segments to focus on
-           - Segments to avoid or deprioritize
-           - Competitive moats to build
-           - Market positioning strategy
-
-        Format as structured JSON with detailed overlap analysis and recommendations.
+        Keep response under 200 words. JSON format.
         """
         
-        return await self.claude_service.get_completion(overlap_prompt)
+        return await self.claude_service.get_completion(overlap_prompt, max_tokens=1200)
     
     async def _analyze_pricing_strategies(
         self,
@@ -417,59 +316,33 @@ class CompetitiveIntelligenceService:
         business_context: Dict[str, Any],
         user_inputs: Any
     ) -> Dict[str, Any]:
-        """Analyze competitor pricing strategies and intelligence"""
+        """Analyze competitor pricing - OPTIMIZED"""
+        
+        # OPTIMIZATION: Extract only pricing-relevant competitor info
+        pricing_info = []
+        for prof in competitor_profiles[:4]:  # Limit to top 4
+            if isinstance(prof, dict):
+                pricing_info.append({
+                    'name': prof.get('company_name', 'Unknown'),
+                    'model': prof.get('pricing_model', 'Unknown')
+                })
         
         pricing_prompt = f"""
-        Analyze competitive pricing strategies and intelligence:
+        Pricing analysis for {business_context.get('basic_info', {}).get('company_name', 'Unknown')}:
 
-        Competitor Profiles: {competitor_profiles}
-        Business Context: {business_context}
-        User Inputs: {user_inputs}
+        Competitors: {pricing_info}
+        Our Business: {business_context.get('basic_info', {}).get('description', 'Unknown')[:100]}
 
-        Provide comprehensive pricing intelligence:
+        Analyze:
+        1. Common pricing models in our market
+        2. Price positioning opportunities (premium/value)
+        3. Pricing recommendations for our solution
+        4. Competitive pricing risks
 
-        1. PRICING MODEL ANALYSIS:
-           For each major competitor:
-           - Pricing model (tiered, per-user, usage-based, etc.)
-           - Pricing transparency (published vs custom)
-           - Free tier or trial offerings
-           - Enterprise pricing approach
-
-        2. PRICE POINT COMPARISON:
-           - Entry-level pricing comparisons
-           - Mid-tier pricing analysis
-           - Enterprise pricing patterns
-           - Price per value unit analysis
-
-        3. PACKAGING STRATEGIES:
-           - Feature bundling approaches
-           - Tier differentiation strategies
-           - Add-on and upsell pricing
-           - Professional services pricing
-
-        4. COMPETITIVE PRICING POSITIONING:
-           - Premium vs value positioning
-           - Market price leadership
-           - Pricing elasticity considerations
-           - Value-based pricing evidence
-
-        5. PRICING TRENDS:
-           - Recent pricing changes
-           - Market pricing evolution
-           - Emerging pricing models
-           - Customer feedback on pricing
-
-        6. PRICING RECOMMENDATIONS:
-           - Optimal pricing positioning
-           - Competitive pricing strategies
-           - Value communication approaches
-           - Pricing test recommendations
-
-        Include confidence levels and note when pricing information is estimated.
-        Format as structured JSON with detailed pricing analysis.
+        Keep response under 150 words. JSON format.
         """
         
-        return await self.claude_service.get_completion(pricing_prompt)
+        return await self.claude_service.get_completion(pricing_prompt, max_tokens=1000)
     
     async def _generate_positioning_recommendations(
         self,
@@ -477,57 +350,32 @@ class CompetitiveIntelligenceService:
         feature_comparison: Dict[str, Any],
         market_overlap: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Generate competitive positioning recommendations"""
+        """Generate positioning recommendations - OPTIMIZED"""
+        
+        # OPTIMIZATION: Extract only key insights for positioning
+        key_insights = {
+            'top_competitors': [prof.get('company_name', 'Unknown') if isinstance(prof, dict) else 'Unknown' for prof in competitor_profiles[:3]],
+            'our_advantages': str(feature_comparison).split('advantages')[0] if 'advantages' in str(feature_comparison) else 'Unknown',
+            'white_spaces': str(market_overlap).split('white')[0] if 'white' in str(market_overlap) else 'Unknown'
+        }
         
         positioning_prompt = f"""
-        Generate comprehensive competitive positioning recommendations:
+        Positioning strategy:
 
-        Competitor Profiles: {competitor_profiles}
-        Feature Comparison: {feature_comparison}
-        Market Overlap Analysis: {market_overlap}
+        Top Competitors: {key_insights['top_competitors']}
+        Our Advantages: {key_insights['our_advantages'][:200]}
+        Market Gaps: {key_insights['white_spaces'][:200]}
 
-        Develop positioning strategy including:
+        Recommend:
+        1. Core positioning statement vs competition
+        2. Key differentiators to emphasize
+        3. Best market segments to target
+        4. Messaging strategy summary
 
-        1. COMPETITIVE POSITIONING FRAMEWORK:
-           - Core positioning statement vs competition
-           - Key differentiators to emphasize
-           - Competitive advantages to highlight
-           - Positioning pillars and themes
-
-        2. SEGMENT-SPECIFIC POSITIONING:
-           - How to position in each target segment
-           - Competitor-specific messaging
-           - Unique value propositions by segment
-           - Competitive displacement strategies
-
-        3. MESSAGING STRATEGY:
-           - Head-to-head comparison messaging
-           - Indirect competitive messaging
-           - Category creation opportunities
-           - Thought leadership positioning
-
-        4. COMPETITIVE RESPONSE PLAYBOOK:
-           - How to respond to competitor claims
-           - Defensive positioning strategies
-           - Counter-attack messaging
-           - Competitive objection handling
-
-        5. MARKET POSITIONING:
-           - Where to compete vs avoid
-           - Blue ocean opportunities
-           - Category definition strategy
-           - Market education approach
-
-        6. IMPLEMENTATION ROADMAP:
-           - Positioning rollout strategy
-           - Message testing recommendations
-           - Competitive monitoring needs
-           - Success metrics and tracking
-
-        Format as structured JSON with actionable positioning recommendations.
+        Keep response under 200 words. JSON format.
         """
         
-        return await self.claude_service.get_completion(positioning_prompt)
+        return await self.claude_service.get_completion(positioning_prompt, max_tokens=1200)
     
     async def _create_competitive_summary(
         self,
@@ -535,48 +383,22 @@ class CompetitiveIntelligenceService:
         feature_comparison: Dict[str, Any],
         market_overlap: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Create executive summary of competitive intelligence"""
+        """Create executive summary - OPTIMIZED"""
         
+        # OPTIMIZATION: Create summary from previous analysis without re-processing
         summary_prompt = f"""
-        Create an executive summary of competitive intelligence:
+        Executive Summary of Competitive Analysis:
 
-        Competitor Profiles: {competitor_profiles}
-        Feature Comparison: {feature_comparison}
-        Market Overlap: {market_overlap}
+        Competitors Found: {len(competitor_profiles)} companies
+        Analysis Complete: Feature comparison, market overlap, positioning
 
-        Provide executive summary including:
+        Summarize in 4 key points:
+        1. Competitive Landscape (high-level overview)
+        2. Our Competitive Advantages (top 3)
+        3. Main Threats (top 2)
+        4. Strategic Recommendations (top 3 actions)
 
-        1. COMPETITIVE LANDSCAPE OVERVIEW:
-           - Number and types of competitors identified
-           - Market maturity and competitive intensity
-           - Key market dynamics and trends
-           - Competitive threats and opportunities
-
-        2. TOP COMPETITIVE INSIGHTS:
-           - Most significant competitive threats
-           - Biggest competitive advantages we have
-           - Critical gaps to address
-           - Market positioning opportunities
-
-        3. STRATEGIC RECOMMENDATIONS:
-           - Priority competitive actions
-           - Investment recommendations
-           - Market positioning strategy
-           - Competitive monitoring priorities
-
-        4. KEY BATTLEGROUNDS:
-           - Most competitive market segments
-           - Feature areas of intense competition
-           - Pricing battlegrounds
-           - Customer acquisition competition
-
-        5. SUCCESS FACTORS:
-           - How to win against competition
-           - Sustainable competitive advantages
-           - Moats to build and defend
-           - Market leadership opportunities
-
-        Format as structured JSON with executive-level insights and recommendations.
+        Keep response under 150 words total. JSON format.
         """
         
-        return await self.claude_service.get_completion(summary_prompt)
+        return await self.claude_service.get_completion(summary_prompt, max_tokens=1000)

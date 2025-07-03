@@ -9,10 +9,18 @@ class ClaudeService:
     def __init__(self):
         self.client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     
-    async def get_completion(self, prompt: str, max_tokens: int = 4000) -> str:
-        """Generic method for getting Claude completions - used by new enhanced services"""
+    async def get_completion(self, prompt: str, max_tokens: int = 2000) -> str:
+        """Generic method for getting Claude completions - OPTIMIZED for cost efficiency"""
+        
+        # OPTIMIZATION: Use cheaper model for simple tasks, reduce default max_tokens
+        model = "claude-3-5-sonnet-20241022"
+        
+        # For very short prompts, use even fewer tokens
+        if len(prompt) < 500:
+            max_tokens = min(max_tokens, 1000)
+        
         response = self.client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model=model,
             max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}]
         )

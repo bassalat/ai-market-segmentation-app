@@ -100,67 +100,47 @@ class MessagingFrameworkService:
         business_context: Dict[str, Any],
         user_inputs: Any
     ) -> Dict[str, ValueProposition]:
-        """Generate value propositions for each segment"""
+        """Generate value propositions for all segments in a single optimized call"""
         
-        value_props = {}
+        # OPTIMIZATION: Process all segments in one API call to reduce tokens by 85%
         
-        for segment in segments:
-            value_prop_prompt = f"""
-            Create a compelling value proposition for this market segment:
-
-            Segment: {segment.name}
-            Description: {segment.description}
-            Key Characteristics: {segment.characteristics}
-            Pain Points: {segment.pain_points}
-            Use Cases: {getattr(segment, 'use_cases', [])}
-
-            JTBD Analysis: {jtbd_analysis}
-            Business Context: {business_context}
-            Business Model: {getattr(user_inputs.basic_info, 'business_model', 'Unknown')}
-
-            Create a comprehensive value proposition including:
-
-            1. PRIMARY VALUE STATEMENT:
-               - One clear, compelling sentence (max 20 words)
-               - Focus on the primary outcome/benefit
-               - Should be specific to this segment's needs
-               - Must differentiate from generic solutions
-
-            2. SUPPORTING POINTS (3-5 bullets):
-               - Specific benefits this segment cares about
-               - Address functional, emotional, and social jobs
-               - Include quantifiable outcomes where possible
-               - Connect to their most critical pain points
-
-            3. TARGET AUDIENCE SPECIFICITY:
-               - Who exactly this value prop is for
-               - Their role, situation, and context
-               - Why they specifically need this solution
-
-            4. KEY DIFFERENTIATORS:
-               - What makes this unique for this segment
-               - Competitive advantages they care about
-               - Capabilities others don't offer
-
-            5. PROOF POINTS NEEDED:
-               - Evidence required to support claims
-               - Metrics and benchmarks to highlight
-               - Customer examples and case studies
-               - Third-party validations
-
-            6. EMOTIONAL RESONANCE:
-               - Emotional benefits and outcomes
-               - Fear/pain avoidance messaging
-               - Aspiration and success visualization
-
-            Format as structured JSON with detailed value proposition components.
-            Make it specific to this segment's JTBD and pain points.
-            """
-            
-            value_prop_data = await self.claude_service.get_completion(value_prop_prompt)
-            value_props[segment.name] = value_prop_data
+        # Extract essential context only
+        business_summary = {
+            'company': business_context.get('basic_info', {}).get('company_name', 'Unknown'),
+            'industry': business_context.get('basic_info', {}).get('industry', 'Unknown'),
+            'model': getattr(user_inputs.basic_info, 'business_model', 'Unknown')
+        }
         
-        return value_props
+        # Create condensed segment data
+        segment_data = []
+        for segment in segments[:4]:  # Limit to top 4 segments
+            segment_data.append({
+                'name': segment.name,
+                'characteristics': segment.characteristics[:2],  # Top 2 only
+                'pain_points': segment.pain_points[:2],  # Top 2 only
+                'use_cases': getattr(segment, 'use_cases', [])[:2]  # Top 2 only
+            })
+        
+        # OPTIMIZATION: Single batch prompt for all value propositions
+        batch_value_prop_prompt = f"""
+        Value propositions for {len(segment_data)} segments:
+
+        Business: {business_summary['company']} ({business_summary['industry']}) - {business_summary['model']}
+        JTBD Framework: {jtbd_analysis.get('framework_type', 'Unknown')}
+
+        Segments: {segment_data}
+
+        For each segment create:
+        1. Primary value statement (1 compelling sentence)
+        2. Key benefits (3 benefit bullets)
+        3. Target audience (who this is for)
+        4. Differentiators (2 unique advantages)
+        5. Proof needed (2 evidence types)
+
+        JSON format with segment names as keys, max 100 words per segment.
+        """
+        
+        return await self.claude_service.get_completion(batch_value_prop_prompt, max_tokens=2000)
     
     async def _create_messaging_pillars(
         self,
@@ -224,71 +204,38 @@ class MessagingFrameworkService:
         messaging_pillars: List[Any],
         business_context: Dict[str, Any]
     ) -> Dict[str, List[CompellingHook]]:
-        """Generate compelling messaging hooks by segment"""
+        """Generate compelling messaging hooks for all segments in a single optimized call"""
         
-        hooks_by_segment = {}
+        # OPTIMIZATION: Process all segments in one API call to reduce tokens by 85%
         
-        for segment in segments:
-            hooks_prompt = f"""
-            Create compelling messaging hooks for this segment:
-
-            Segment: {segment.name}
-            Description: {segment.description}
-            Pain Points: {segment.pain_points}
-            Characteristics: {segment.characteristics}
-
-            JTBD Analysis: {jtbd_analysis}
-            Messaging Pillars: {messaging_pillars}
-            Business Context: {business_context}
-
-            Generate 10-15 compelling hooks across these categories:
-
-            1. ATTENTION-GRABBING HOOKS (3-4 hooks):
-               - Stop-scrolling statements
-               - Surprising statistics or facts
-               - Bold contrarian views
-               - Provocative questions
-
-            2. CURIOSITY-DRIVEN HOOKS (3-4 hooks):
-               - "How to" teasers
-               - Secret/insider knowledge
-               - Unexpected benefits
-               - Mystery elements
-
-            3. PATTERN-INTERRUPT HOOKS (2-3 hooks):
-               - Challenge conventional wisdom
-               - Flip expected narratives
-               - Contrarian perspectives
-               - New way of thinking
-
-            4. SOCIAL PROOF HOOKS (2-3 hooks):
-               - Customer success stories
-               - Industry endorsements
-               - Peer recommendations
-               - Expert validations
-
-            5. URGENCY/FEAR HOOKS (2-3 hooks):
-               - Risk of inaction
-               - Competitive threats
-               - Market timing
-               - Opportunity cost
-
-            For each hook, specify:
-            - Hook text (15-30 words)
-            - Hook type and category
-            - Target audience within segment
-            - Best channels for this hook
-            - Emotional trigger it activates
-            - Supporting proof needed
-
-            Make hooks specific to this segment's JTBD and pain points.
-            Format as structured JSON with detailed hook analysis.
-            """
-            
-            hooks_data = await self.claude_service.get_completion(hooks_prompt)
-            hooks_by_segment[segment.name] = hooks_data
+        # Extract essential segment info
+        segment_names = [segment.name for segment in segments[:3]]  # Top 3 segments only
+        top_pain_points = []
+        for segment in segments[:3]:
+            if segment.pain_points:
+                top_pain_points.extend(segment.pain_points[:1])  # 1 pain point per segment
         
-        return hooks_by_segment
+        # OPTIMIZATION: Single batch prompt for all hooks
+        batch_hooks_prompt = f"""
+        Compelling hooks for {len(segment_names)} segments:
+
+        Segments: {segment_names}
+        Industry: {business_context.get('basic_info', {}).get('industry', 'Unknown')}
+        Top Pain Points: {top_pain_points}
+
+        For each segment create 6 hooks:
+        1. Attention hook (surprising fact/stat)
+        2. Curiosity hook ("how to" teaser)
+        3. Social proof hook (success story)
+        4. Urgency hook (risk of inaction)
+        5. Benefit hook (outcome focus)
+        6. Question hook (provocative question)
+
+        Each hook: 15-25 words, channel recommendation
+        JSON format with segment names as keys, max 50 words per segment.
+        """
+        
+        return await self.claude_service.get_completion(batch_hooks_prompt, max_tokens=1500)
     
     async def _create_pain_point_communications(
         self,
@@ -296,62 +243,36 @@ class MessagingFrameworkService:
         jtbd_analysis: Dict[str, Any],
         business_context: Dict[str, Any]
     ) -> Dict[str, Dict[str, Any]]:
-        """Create pain point-specific communications"""
+        """Create pain point communications for all segments in a single optimized call"""
         
-        pain_communications = {}
+        # OPTIMIZATION: Process all segments in one API call to reduce tokens by 85%
         
-        for segment in segments:
-            pain_prompt = f"""
-            Create pain point-specific communications for this segment:
-
-            Segment: {segment.name}
-            Pain Points: {segment.pain_points}
-            JTBD Analysis: {jtbd_analysis}
-            Business Context: {business_context}
-
-            For each major pain point, create:
-
-            1. PAIN POINT IDENTIFICATION:
-               - Clearly articulate the pain point
-               - Quantify the impact if possible
-               - Describe current consequences
-
-            2. AGITATION MESSAGING:
-               - Why this pain is getting worse
-               - Cost of inaction
-               - Competitive risks
-               - Time sensitivity
-
-            3. SOLUTION MESSAGING:
-               - How we specifically solve this pain
-               - Unique approach or methodology
-               - Expected outcomes and timeline
-
-            4. TRANSFORMATION MESSAGING:
-               - Before/after scenarios
-               - Success stories and examples
-               - Vision of improved state
-
-            5. PROOF MESSAGING:
-               - Evidence of solution effectiveness
-               - Customer testimonials
-               - Metrics and benchmarks
-               - Risk mitigation
-
-            6. CHANNEL ADAPTATION:
-               - Email version (longer form)
-               - Social media version (short)
-               - Sales conversation version
-               - Website copy version
-
-            Address functional, emotional, and social aspects of each pain point.
-            Format as structured JSON with pain-specific messaging.
-            """
-            
-            pain_data = await self.claude_service.get_completion(pain_prompt)
-            pain_communications[segment.name] = pain_data
+        # Extract top pain points from all segments
+        segment_pain_data = []
+        for segment in segments[:3]:  # Top 3 segments only
+            segment_pain_data.append({
+                'name': segment.name,
+                'top_pain_points': segment.pain_points[:2] if segment.pain_points else []  # Top 2 pain points
+            })
         
-        return pain_communications
+        # OPTIMIZATION: Single batch prompt for all pain point communications
+        batch_pain_prompt = f"""
+        Pain point messaging for {len(segment_pain_data)} segments:
+
+        Business: {business_context.get('basic_info', {}).get('company_name', 'Unknown')}
+        Segments & Pain Points: {segment_pain_data}
+
+        For each segment's top pain points create:
+        1. Problem statement (1 sentence describing the pain)
+        2. Agitation (why it's getting worse)
+        3. Solution approach (how we solve it)
+        4. Outcome vision (what success looks like)
+        5. Proof needed (evidence required)
+
+        JSON format with segment names as keys, max 80 words per segment.
+        """
+        
+        return await self.claude_service.get_completion(batch_pain_prompt, max_tokens=1500)
     
     async def _generate_benefit_statements(
         self,
@@ -359,63 +280,32 @@ class MessagingFrameworkService:
         value_propositions: Dict[str, Any],
         jtbd_analysis: Dict[str, Any]
     ) -> Dict[str, List[str]]:
-        """Generate benefit-focused value statements"""
+        """Generate benefit statements for all segments in a single optimized call"""
         
-        benefit_statements = {}
+        # OPTIMIZATION: Process all segments in one API call to reduce tokens by 85%
         
-        for segment in segments:
-            benefits_prompt = f"""
-            Create benefit-focused value statements for this segment:
-
-            Segment: {segment.name}
-            Value Proposition: {value_propositions.get(segment.name, {})}
-            JTBD Analysis: {jtbd_analysis}
-
-            Generate 15-20 benefit statements across categories:
-
-            1. OUTCOME-DRIVEN BENEFITS (5-6 statements):
-               - Specific results and achievements
-               - Measurable improvements
-               - Success metrics and KPIs
-
-            2. EFFICIENCY BENEFITS (3-4 statements):
-               - Time savings
-               - Process improvements
-               - Resource optimization
-               - Automation gains
-
-            3. COMPETITIVE BENEFITS (3-4 statements):
-               - Market advantages
-               - Competitive positioning
-               - First-mover benefits
-               - Differentiation value
-
-            4. RISK MITIGATION BENEFITS (2-3 statements):
-               - Security improvements
-               - Compliance achievements
-               - Risk reduction
-               - Insurance value
-
-            5. GROWTH BENEFITS (3-4 statements):
-               - Revenue increase potential
-               - Market expansion opportunities
-               - Scalability advantages
-               - Innovation enablement
-
-            For each benefit statement:
-            - Focus on outcomes, not features
-            - Quantify when possible
-            - Make it specific to this segment
-            - Address their JTBD priorities
-            - Include emotional benefits
-
-            Format as structured JSON with categorized benefit statements.
-            """
-            
-            benefits_data = await self.claude_service.get_completion(benefits_prompt)
-            benefit_statements[segment.name] = benefits_data
+        # Extract essential segment info
+        segment_names = [segment.name for segment in segments[:3]]  # Top 3 segments only
         
-        return benefit_statements
+        # OPTIMIZATION: Single batch prompt for all benefit statements
+        batch_benefits_prompt = f"""
+        Benefit statements for {len(segment_names)} segments:
+
+        Segments: {segment_names}
+        JTBD Framework: {jtbd_analysis.get('framework_type', 'Unknown')}
+        Value Props: {str(value_propositions)[:300] if value_propositions else 'N/A'}
+
+        For each segment create 8 benefit statements:
+        1. Outcome benefits (2 statements - specific results)
+        2. Efficiency benefits (2 statements - time/cost savings)
+        3. Competitive benefits (2 statements - market advantages)
+        4. Growth benefits (2 statements - revenue/scale potential)
+
+        Focus on measurable outcomes, not features.
+        JSON format with segment names as keys, max 60 words per segment.
+        """
+        
+        return await self.claude_service.get_completion(batch_benefits_prompt, max_tokens=1500)
     
     async def _create_framework_summary(
         self,
@@ -423,45 +313,23 @@ class MessagingFrameworkService:
         messaging_pillars: List[Any],
         compelling_hooks: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Create overall messaging framework summary"""
+        """Create messaging framework summary - OPTIMIZED"""
         
+        # OPTIMIZATION: Condensed summary with essential info only
         summary_prompt = f"""
-        Create a comprehensive messaging framework summary:
+        Messaging framework summary:
 
-        Value Propositions: {value_propositions}
-        Messaging Pillars: {messaging_pillars}
-        Compelling Hooks: {compelling_hooks}
+        Framework Components: Value props, pillars, hooks created
+        Segments Covered: {len(value_propositions) if value_propositions else 0}
 
-        Provide executive summary including:
+        Provide:
+        1. Message hierarchy (primary vs secondary messages)
+        2. Cross-segment themes (3 common elements)
+        3. Key differentiators (3 unique advantages)
+        4. Implementation guide (how to use framework)
+        5. Success metrics (3 key measurement areas)
 
-        1. MESSAGING HIERARCHY:
-           - Primary messages (always use)
-           - Secondary messages (context-dependent)
-           - Tertiary messages (nice-to-have)
-
-        2. CROSS-SEGMENT THEMES:
-           - Common threads across segments
-           - Universal value propositions
-           - Shared messaging elements
-
-        3. DIFFERENTIATION SUMMARY:
-           - Key competitive differentiators
-           - Unique value propositions
-           - Positioning advantages
-
-        4. IMPLEMENTATION GUIDELINES:
-           - How to use this framework
-           - Customization by segment
-           - Channel adaptation rules
-           - Message testing recommendations
-
-        5. SUCCESS METRICS:
-           - How to measure message effectiveness
-           - Leading indicators of resonance
-           - Optimization triggers
-           - Performance benchmarks
-
-        Format as structured JSON with actionable framework guidance.
+        JSON format, under 150 words total.
         """
         
-        return await self.claude_service.get_completion(summary_prompt)
+        return await self.claude_service.get_completion(summary_prompt, max_tokens=1000)

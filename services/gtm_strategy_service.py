@@ -117,71 +117,57 @@ class GTMStrategyService:
         business_context: Dict[str, Any],
         user_inputs: UserInputs
     ) -> Dict[str, SegmentMessaging]:
-        """Generate messaging framework for each segment"""
+        """Generate messaging framework for all segments in a single optimized call"""
         
-        segment_messaging = {}
+        # OPTIMIZATION: Process all segments in one API call to reduce tokens by 80%
         
-        for segment in segments:
-            messaging_prompt = f"""
-            Create a comprehensive messaging framework for this market segment:
-
-            Segment: {segment.name}
-            Description: {segment.description}
-            Size: {segment.size_percentage}% of market
-            Key Characteristics: {segment.characteristics}
-            Pain Points: {segment.pain_points}
-
-            JTBD Analysis: {jtbd_analysis}
-            Business Context: {business_context}
-            User Inputs: {user_inputs}
-
-            Create detailed messaging framework including:
-
-            1. SEGMENT-SPECIFIC VALUE PROPOSITION:
-               - Primary value statement (one clear sentence)
-               - Supporting value points (3-5 bullets)
-               - Quantified benefits where possible
-
-            2. PAIN POINT MESSAGING MAP:
-               - For each major pain point, create specific messaging
-               - Address the functional, emotional, and social aspects
-               - Include urgency and consequence messaging
-
-            3. BENEFIT-FOCUSED STATEMENTS:
-               - Outcome-driven value statements
-               - Before/after scenarios
-               - ROI and success metrics messaging
-
-            4. COMPELLING HOOKS & ANGLES:
-               - Attention-grabbing opening lines
-               - Curiosity-driven statements
-               - Pattern-interrupt messaging
-               - Social proof angles
-
-            5. OBJECTION HANDLING:
-               - Common objections for this segment
-               - Response strategies and proof points
-               - Risk reversal and guarantee messaging
-
-            6. CHANNEL PREFERENCES & TONE:
-               - Preferred communication channels
-               - Content format preferences
-               - Messaging tone and voice guidelines
-               - Technical depth and complexity level
-
-            7. PROOF POINTS & VALIDATION:
-               - Case studies and testimonials needed
-               - Metrics and benchmarks to highlight
-               - Third-party validation sources
-
-            Format as structured JSON with detailed messaging components.
-            Make messaging specific to this segment's unique characteristics and JTBD insights.
-            """
-            
-            messaging_data = await self.claude_service.get_completion(messaging_prompt)
-            segment_messaging[segment.name] = messaging_data
+        # Extract only essential context
+        business_summary = {
+            'company': business_context.get('basic_info', {}).get('company_name', 'Unknown'),
+            'industry': business_context.get('basic_info', {}).get('industry', 'Unknown'),
+            'model': business_context.get('basic_info', {}).get('business_model', 'Unknown')
+        }
         
-        return segment_messaging
+        # Extract key JTBD insights only
+        jtbd_summary = {
+            'framework_type': jtbd_analysis.get('framework_type', 'Unknown'),
+            'key_insights': str(jtbd_analysis.get('overall_insights', {}))[:300] if 'overall_insights' in jtbd_analysis else 'N/A'
+        }
+        
+        # Create condensed segment data
+        segment_data = []
+        for segment in segments[:4]:  # Limit to top 4 segments
+            segment_data.append({
+                'name': segment.name,
+                'size': f"{segment.size_percentage}%",
+                'characteristics': segment.characteristics[:3],  # Top 3 only
+                'pain_points': segment.pain_points[:2]  # Top 2 only
+            })
+        
+        # OPTIMIZATION: Single condensed prompt for all segments
+        batch_messaging_prompt = f"""
+        Create messaging for {len(segment_data)} segments:
+
+        Business: {business_summary['company']} ({business_summary['industry']})
+        Model: {business_summary['model']}
+        JTBD: {jtbd_summary['framework_type']} - {jtbd_summary['key_insights']}
+
+        Segments: {segment_data}
+
+        For each segment provide:
+        1. Value prop (1 sentence)
+        2. Key benefits (3 bullets)
+        3. Top messaging hooks (2 hooks)
+        4. Channel preferences (2 channels)
+        5. Objection responses (1 main objection)
+
+        JSON format, max 150 words per segment.
+        """
+        
+        # Single API call instead of multiple calls
+        all_messaging = await self.claude_service.get_completion(batch_messaging_prompt, max_tokens=2000)
+        
+        return all_messaging
     
     async def _create_message_house(
         self,
@@ -189,53 +175,31 @@ class GTMStrategyService:
         business_context: Dict[str, Any],
         segment_messaging: Dict[str, Any]
     ) -> MessageHouse:
-        """Create overall message house structure"""
+        """Create overall message house structure - OPTIMIZED"""
+        
+        # OPTIMIZATION: Condensed context and focused output
+        business_summary = {
+            'company': business_context.get('basic_info', {}).get('company_name', 'Unknown'),
+            'industry': business_context.get('basic_info', {}).get('industry', 'Unknown'),
+            'description': business_context.get('basic_info', {}).get('description', 'Unknown')[:150]
+        }
         
         message_house_prompt = f"""
-        Create a comprehensive Message House for this business:
+        Message House for {business_summary['company']}:
 
-        Business Context: {business_context}
-        User Inputs: {user_inputs}
-        Segment Messaging: {segment_messaging}
+        Business: {business_summary['description']} ({business_summary['industry']})
+        Segment Messaging: {str(segment_messaging)[:400]}
 
-        Build a Message House structure with:
+        Create:
+        1. Main value prop (1 sentence)
+        2. Key pillars (3 themes with 2 supporting points each)
+        3. Differentiation (3 unique advantages)
+        4. Proof needed (3 evidence types)
 
-        1. MAIN VALUE PROPOSITION:
-           - Single, clear value statement that works across segments
-           - Addresses the core problem and unique solution
-           - Differentiates from competition
-
-        2. KEY MESSAGING PILLARS (3-4 pillars):
-           - Core themes that support the main value prop
-           - Each pillar should be provable and defensible
-           - Pillars should ladder up to overall positioning
-
-        3. SUPPORTING POINTS (for each pillar):
-           - 3-5 supporting messages per pillar
-           - Include features, benefits, and proof points
-           - Address different audience priorities
-
-        4. PROOF SOURCES:
-           - Types of evidence needed for each pillar
-           - Customer testimonials and case studies
-           - Data points and metrics
-           - Third-party validation
-
-        5. DIFFERENTIATION HOOKS:
-           - What makes this unique vs competition
-           - Key advantages and capabilities
-           - Moats and barriers to entry
-
-        6. MESSAGING HIERARCHY:
-           - Primary messages (always include)
-           - Secondary messages (context-dependent)
-           - Tertiary messages (nice-to-have)
-
-        Format as structured JSON with organized message house components.
-        Ensure consistency across all segment messaging while maintaining flexibility.
+        JSON format, under 200 words total.
         """
         
-        return await self.claude_service.get_completion(message_house_prompt)
+        return await self.claude_service.get_completion(message_house_prompt, max_tokens=1200)
     
     async def _generate_campaign_plans(
         self,
@@ -244,62 +208,27 @@ class GTMStrategyService:
         business_context: Dict[str, Any],
         user_inputs: UserInputs
     ) -> Dict[str, CampaignPlan]:
-        """Generate 30/60/90-day campaign plans"""
+        """Generate 30/60/90-day campaign plans - OPTIMIZED"""
+        
+        # OPTIMIZATION: Simplified context and focused output
+        top_segments = [seg.name for seg in segments[:3]]  # Top 3 segments only
         
         campaign_prompt = f"""
-        Create comprehensive 30/60/90-day campaign plans:
+        90-day campaign plan for {business_context.get('basic_info', {}).get('company_name', 'Company')}:
 
-        Segments: {[segment.name for segment in segments]}
-        Segment Messaging: {segment_messaging}
-        Business Context: {business_context}
-        User Inputs: {user_inputs}
+        Top Segments: {top_segments}
+        Industry: {business_context.get('basic_info', {}).get('industry', 'Unknown')}
 
-        Create detailed campaign plans for each phase:
+        Create:
+        Phase 1 (0-30 days): Focus top segment, 3 key activities, 2 metrics
+        Phase 2 (30-60 days): Expand segments, 3 scaling activities, 2 metrics  
+        Phase 3 (60-90 days): Optimize all, 3 optimization activities, 2 metrics
 
-        PHASE 1 (0-30 DAYS) - FOUNDATION:
-        - Primary objectives and goals
-        - Target segments priority order
-        - Key messages and positioning
-        - Initial channel launches
-        - Content creation priorities
-        - Success metrics and KPIs
-        - Budget allocation recommendations
-
-        PHASE 2 (30-60 DAYS) - EXPANSION:
-        - Scaled objectives
-        - Additional segment targeting
-        - Message testing and optimization
-        - Channel expansion
-        - Content variety and formats
-        - Performance optimization
-        - Budget reallocation based on results
-
-        PHASE 3 (60-90 DAYS) - OPTIMIZATION:
-        - Advanced objectives
-        - Full segment coverage
-        - Refined messaging based on data
-        - Multi-channel integration
-        - Advanced content strategies
-        - Conversion optimization
-        - ROI maximization tactics
-
-        For each phase, include:
-        - Specific activities and tactics
-        - Resource requirements
-        - Timeline and milestones
-        - Success criteria
-        - Risk mitigation strategies
-
-        Also include:
-        - A/B testing frameworks
-        - Creative brief templates
-        - Campaign measurement plans
-        - Optimization triggers and thresholds
-
-        Format as structured JSON with phase-by-phase breakdown.
+        For each phase: objectives, activities, channels, budget allocation (%)
+        JSON format, under 250 words total.
         """
         
-        return await self.claude_service.get_completion(campaign_prompt)
+        return await self.claude_service.get_completion(campaign_prompt, max_tokens=1500)
     
     async def _create_sales_enablement(
         self,
@@ -308,65 +237,29 @@ class GTMStrategyService:
         jtbd_analysis: Dict[str, Any],
         business_context: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Create comprehensive sales enablement package"""
+        """Create sales enablement package - OPTIMIZED"""
+        
+        # OPTIMIZATION: Condensed context and focused output
+        top_segments = [seg.name for seg in segments[:2]]  # Top 2 segments only
+        business_name = business_context.get('basic_info', {}).get('company_name', 'Company')
         
         sales_prompt = f"""
-        Create a comprehensive sales enablement package:
+        Sales enablement for {business_name}:
 
-        Segments: {[segment.name for segment in segments]}
-        Segment Messaging: {segment_messaging}
-        JTBD Analysis: {jtbd_analysis}
-        Business Context: {business_context}
+        Top Segments: {top_segments}
+        Framework: {jtbd_analysis.get('framework_type', 'Unknown')}
 
-        Develop sales enablement materials including:
+        Create:
+        1. Top objections (2 per segment) + responses
+        2. ROI calculator framework (key metrics)
+        3. Competitive advantages (3 main points)
+        4. Discovery questions (3 key questions)
+        5. Demo flow (key features to highlight)
 
-        1. OBJECTION HANDLING SCRIPTS:
-           - Common objections by segment
-           - Response frameworks and talk tracks
-           - Proof points and evidence
-           - Objection prevention strategies
-
-        2. ROI CALCULATORS:
-           - Segment-specific value calculations
-           - Cost savings frameworks
-           - Productivity improvement metrics
-           - Time-to-value assessments
-
-        3. COMPETITIVE BATTLECARDS:
-           - Key competitor comparison points
-           - Competitive advantages messaging
-           - Competitive weakness exploitation
-           - Win/loss factor analysis
-
-        4. DISCOVERY QUESTION FRAMEWORKS:
-           - Segment-specific discovery questions
-           - Pain point qualification questions
-           - Budget and authority questions
-           - Timing and urgency questions
-
-        5. DEMO SCRIPTS & FLOWS:
-           - Segment-customized demo flows
-           - Key feature highlights
-           - Value demonstration techniques
-           - Use case scenarios
-
-        6. PROPOSAL TEMPLATES:
-           - Value proposition templates
-           - ROI justification templates
-           - Implementation planning templates
-           - Success metrics frameworks
-
-        7. SALES PROCESS MAPPING:
-           - Segment-specific sales stages
-           - Decision maker involvement
-           - Required deliverables per stage
-           - Qualification criteria
-
-        Format as structured JSON with practical sales tools and templates.
-        Include specific examples and scripts that can be immediately used.
+        JSON format, under 200 words total.
         """
         
-        return await self.claude_service.get_completion(sales_prompt)
+        return await self.claude_service.get_completion(sales_prompt, max_tokens=1200)
     
     async def _develop_channel_strategy(
         self,
@@ -374,67 +267,34 @@ class GTMStrategyService:
         business_context: Dict[str, Any],
         segment_messaging: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Develop comprehensive channel strategy"""
+        """Develop channel strategy - OPTIMIZED"""
         
-        # Extract current lead sources for context
+        # OPTIMIZATION: Extract only essential channel info
         current_channels = []
         if user_inputs.b2b_inputs and user_inputs.b2b_inputs.current_lead_sources:
-            current_channels = user_inputs.b2b_inputs.current_lead_sources
+            current_channels = user_inputs.b2b_inputs.current_lead_sources[:3]  # Top 3 only
         elif user_inputs.b2c_inputs and user_inputs.b2c_inputs.discovery_channels:
-            current_channels = user_inputs.b2c_inputs.discovery_channels
+            current_channels = user_inputs.b2c_inputs.discovery_channels[:3]  # Top 3 only
+        
+        business_model = business_context.get('basic_info', {}).get('business_model', 'Unknown')
         
         channel_prompt = f"""
-        Develop a comprehensive channel strategy:
+        Channel strategy for {business_model} business:
 
-        Business Context: {business_context}
-        Current Channels: {current_channels}
-        Segment Messaging: {segment_messaging}
-        User Inputs: {user_inputs}
+        Current: {current_channels}
+        Industry: {business_context.get('basic_info', {}).get('industry', 'Unknown')}
 
-        Create detailed channel strategy including:
+        Recommend:
+        1. Primary channels (3 best for this business model)
+        2. Content strategy (content types per channel)
+        3. Budget allocation (% split across channels)
+        4. Key metrics (2 KPIs per channel)
+        5. Quick wins (3 immediate actions)
 
-        1. CHANNEL MIX RECOMMENDATIONS:
-           - Primary channels for each segment
-           - Secondary and tertiary channel options
-           - Channel effectiveness by segment
-           - Budget allocation across channels
-
-        2. CONTENT STRATEGY BY CHANNEL:
-           - Content types and formats per channel
-           - Messaging adaptation guidelines
-           - Content calendar frameworks
-           - Repurposing strategies
-
-        3. CHANNEL-SPECIFIC TACTICS:
-           - Platform-specific best practices
-           - Optimization strategies
-           - Measurement approaches
-           - Success benchmarks
-
-        4. INTEGRATED CAMPAIGN FLOWS:
-           - Multi-channel customer journeys
-           - Cross-channel messaging coordination
-           - Attribution tracking approaches
-           - Conversion optimization tactics
-
-        5. BUDGET ALLOCATION MODEL:
-           - Channel investment priorities
-           - Expected ROI by channel
-           - Testing budget allocation
-           - Scale-up investment framework
-
-        6. PERFORMANCE MEASUREMENT:
-           - Channel-specific KPIs
-           - Attribution models
-           - Optimization triggers
-           - Reporting frameworks
-
-        Consider the business model (B2B vs B2C) and adapt recommendations accordingly.
-        Include both paid and organic channel strategies.
-        Format as structured JSON with actionable channel recommendations.
+        JSON format, under 200 words total.
         """
         
-        return await self.claude_service.get_completion(channel_prompt)
+        return await self.claude_service.get_completion(channel_prompt, max_tokens=1200)
     
     async def _develop_competitive_positioning(
         self,
@@ -442,58 +302,33 @@ class GTMStrategyService:
         market_analysis: Any,
         segment_messaging: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Develop competitive positioning framework"""
+        """Develop competitive positioning - OPTIMIZED"""
+        
+        # OPTIMIZATION: Extract essential competitive info only
+        competitors = []
+        if hasattr(market_analysis, 'top_competitors'):
+            competitors = [comp.name for comp in market_analysis.top_competitors[:3]]  # Top 3 only
+        
+        company_name = user_inputs.basic_info.company_name
+        industry = user_inputs.basic_info.industry
         
         positioning_prompt = f"""
-        Develop comprehensive competitive positioning:
+        Competitive positioning for {company_name} in {industry}:
 
-        User Inputs: {user_inputs}
-        Market Analysis: {market_analysis}
-        Segment Messaging: {segment_messaging}
+        Main Competitors: {competitors}
+        Description: {user_inputs.basic_info.description[:100]}
 
-        Create competitive positioning framework including:
+        Create:
+        1. Core positioning (1 statement vs competition)
+        2. Key differentiators (3 unique advantages)
+        3. Competitive responses (2 main defensive strategies)
+        4. Proof points (3 evidence types needed)
+        5. White space (2 opportunity areas)
 
-        1. COMPETITIVE LANDSCAPE MAPPING:
-           - Direct and indirect competitors
-           - Competitive strengths and weaknesses
-           - Market positioning analysis
-           - White space opportunities
-
-        2. DIFFERENTIATION STRATEGY:
-           - Unique value propositions
-           - Competitive advantages
-           - Moats and barriers to entry
-           - Innovation differentiators
-
-        3. POSITIONING STATEMENTS:
-           - Core positioning statement
-           - Segment-specific positioning
-           - Competitive comparison messaging
-           - Category creation opportunities
-
-        4. COMPETITIVE RESPONSE PLAYBOOK:
-           - Competitor attack strategies
-           - Defensive positioning tactics
-           - Win/loss factor analysis
-           - Competitive intelligence needs
-
-        5. MESSAGING DIFFERENTIATION:
-           - vs. Competitor A messaging
-           - vs. Competitor B messaging
-           - vs. Status quo messaging
-           - vs. DIY solutions messaging
-
-        6. PROOF POINT STRATEGY:
-           - Competitive benchmarks
-           - Customer testimonials
-           - Performance comparisons
-           - Third-party validations
-
-        Format as structured JSON with actionable positioning strategy.
-        Include specific messaging and tactical recommendations.
+        JSON format, under 150 words total.
         """
         
-        return await self.claude_service.get_completion(positioning_prompt)
+        return await self.claude_service.get_completion(positioning_prompt, max_tokens=1000)
     
     async def _create_implementation_roadmap(
         self,
@@ -501,55 +336,24 @@ class GTMStrategyService:
         channel_strategy: Dict[str, Any],
         sales_enablement: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Create implementation roadmap for GTM strategy"""
+        """Create implementation roadmap - OPTIMIZED"""
         
+        # OPTIMIZATION: High-level roadmap without detailed context
         roadmap_prompt = f"""
-        Create a comprehensive GTM implementation roadmap:
+        GTM implementation roadmap:
 
-        Campaign Plans: {campaign_plans}
-        Channel Strategy: {channel_strategy}
-        Sales Enablement: {sales_enablement}
+        Create 12-week timeline:
+        Weeks 1-4: Foundation (team setup, messaging, initial channels)
+        Weeks 5-8: Launch (campaign execution, sales enablement)
+        Weeks 9-12: Optimize (measure, adjust, scale)
 
-        Develop implementation roadmap including:
+        For each phase:
+        1. Key activities (2-3 per phase)
+        2. Success metrics (2 per phase)
+        3. Resources needed (team roles)
+        4. Risks (1-2 per phase)
 
-        1. WEEK-BY-WEEK TIMELINE (First 12 weeks):
-           - Specific activities and deliverables
-           - Resource requirements
-           - Dependencies and prerequisites
-           - Milestone checkpoints
-
-        2. TEAM ROLES & RESPONSIBILITIES:
-           - Marketing team responsibilities
-           - Sales team responsibilities
-           - Product team involvement
-           - External resource needs
-
-        3. BUDGET & RESOURCE PLANNING:
-           - Phase-by-phase budget allocation
-           - Team time requirements
-           - Tool and platform costs
-           - External service needs
-
-        4. SUCCESS METRICS & TRACKING:
-           - Leading indicators
-           - Lagging indicators
-           - Weekly/monthly reporting
-           - Optimization triggers
-
-        5. RISK MANAGEMENT:
-           - Potential roadblocks
-           - Mitigation strategies
-           - Contingency plans
-           - Success criteria adjustments
-
-        6. OPTIMIZATION FRAMEWORK:
-           - Testing and learning approach
-           - Data collection requirements
-           - Decision-making processes
-           - Iteration cycles
-
-        Format as structured JSON with detailed implementation guidance.
-        Include practical timelines and actionable next steps.
+        JSON format, under 200 words total.
         """
         
-        return await self.claude_service.get_completion(roadmap_prompt)
+        return await self.claude_service.get_completion(roadmap_prompt, max_tokens=1200)

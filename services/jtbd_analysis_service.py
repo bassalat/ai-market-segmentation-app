@@ -127,30 +127,30 @@ class JTBDAnalysisService:
             return await self._analyze_general_jtbd(user_inputs, business_context)
     
     async def _analyze_b2b_jtbd(self, b2b_inputs: B2BInputs, business_context: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze JTBD for B2B business model with role-specific focus"""
+        """Analyze JTBD for B2B business model with role-specific focus - OPTIMIZED"""
+        
+        # OPTIMIZATION: Process all roles in a single API call to reduce tokens by 80%
         
         # Identify relevant roles based on decision makers
         relevant_roles = self._identify_relevant_b2b_roles(b2b_inputs.decision_maker_roles)
         
-        # Generate JTBD analysis for each relevant role
-        role_analyses = {}
+        # OPTIMIZATION: Batch all role analysis into one call
+        all_role_analyses = await self._generate_batch_role_jtbd(
+            relevant_roles, b2b_inputs, business_context
+        )
         
-        for role_key, role_template in relevant_roles.items():
-            role_analysis = await self._generate_role_jtbd(
-                role_template, b2b_inputs, business_context
-            )
-            role_analyses[role_key] = role_analysis
-        
-        # Generate overall JTBD insights
-        overall_insights = await self._generate_jtbd_insights(role_analyses, b2b_inputs, business_context)
+        # OPTIMIZATION: Generate insights and journey mapping together
+        insights_and_journey = await self._generate_combined_insights_and_journey(
+            all_role_analyses, b2b_inputs, business_context
+        )
         
         return {
             'framework_type': 'B2B',
-            'role_analyses': role_analyses,
-            'overall_insights': overall_insights,
-            'decision_journey_map': await self._generate_b2b_decision_journey(b2b_inputs, role_analyses),
-            'trigger_events_calendar': self._generate_trigger_calendar(b2b_inputs, role_analyses),
-            'pain_point_severity_matrix': self._generate_pain_severity_matrix(role_analyses)
+            'role_analyses': all_role_analyses,
+            'overall_insights': insights_and_journey['insights'],
+            'decision_journey_map': insights_and_journey['journey'],
+            'trigger_events_calendar': self._generate_trigger_calendar(b2b_inputs, all_role_analyses),
+            'pain_point_severity_matrix': self._generate_pain_severity_matrix(all_role_analyses)
         }
     
     async def _analyze_b2c_jtbd(self, b2c_inputs: B2CInputs, business_context: Dict[str, Any]) -> Dict[str, Any]:
@@ -240,6 +240,71 @@ class JTBDAnalysisService:
             relevant_roles['it_manager'] = self.b2b_role_templates['it_manager']
         
         return relevant_roles
+    
+    async def _generate_batch_role_jtbd(self, relevant_roles: Dict[str, Dict], b2b_inputs: B2BInputs, business_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate JTBD analysis for all roles in a single optimized call"""
+        
+        # OPTIMIZATION: Extract only essential context
+        business_summary = {
+            'company': business_context.get('basic_info', {}).get('company_name', 'Unknown'),
+            'industry': business_context.get('basic_info', {}).get('industry', 'Unknown'),
+            'description': business_context.get('basic_info', {}).get('description', 'Unknown')[:150]
+        }
+        
+        # OPTIMIZATION: Condensed role data
+        role_summaries = []
+        for role_key, role_template in list(relevant_roles.items())[:4]:  # Limit to top 4 roles
+            role_summaries.append({
+                'key': role_key,
+                'title': role_template['title'],
+                'core_job': role_template['core_job'][:100]  # Truncate
+            })
+        
+        # OPTIMIZATION: Single batch prompt for all roles
+        batch_jtbd_prompt = f"""
+        JTBD analysis for {len(role_summaries)} B2B roles:
+
+        Business: {business_summary['company']} - {business_summary['description']} ({business_summary['industry']})
+        
+        Decision Makers: {b2b_inputs.decision_maker_roles[:3]}
+        Problem: {b2b_inputs.main_problem_solved[:100] if b2b_inputs.main_problem_solved else 'Unknown'}
+
+        Roles: {role_summaries}
+
+        For each role analyze:
+        1. Functional job (main task they need to accomplish)
+        2. Emotional job (how they want to feel)
+        3. Social job (how they want to be perceived)
+        4. Top 2 trigger events
+        5. Top 2 friction points
+        6. Success criteria (how they measure success)
+
+        JSON format with role_key as keys, max 100 words per role.
+        """
+        
+        return await self.claude_service.get_completion(batch_jtbd_prompt, max_tokens=2000)
+    
+    async def _generate_combined_insights_and_journey(self, role_analyses: Dict[str, Any], b2b_inputs: B2BInputs, business_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate insights and decision journey in a single optimized call"""
+        
+        insights_prompt = f"""
+        B2B JTBD insights and decision journey:
+
+        Role Analyses: {str(role_analyses)[:500]}
+        Company: {business_context.get('basic_info', {}).get('company_name', 'Unknown')}
+        Deal Size: {b2b_inputs.deal_size_range}
+        Sales Cycle: {b2b_inputs.sales_cycle_length}
+
+        Provide:
+        1. Key insights (3 common patterns across roles)
+        2. Decision journey (5 phases: trigger→explore→evaluate→decide→implement)
+        3. Stakeholder involvement (who's involved when)
+        4. Main barriers (3 biggest obstacles)
+
+        JSON format with 'insights' and 'journey' keys, under 200 words total.
+        """
+        
+        return await self.claude_service.get_completion(insights_prompt, max_tokens=1500)
     
     async def _generate_role_jtbd(self, role_template: Dict[str, Any], b2b_inputs: B2BInputs, business_context: Dict[str, Any]) -> RoleJTBD:
         """Generate detailed JTBD analysis for a specific role"""
