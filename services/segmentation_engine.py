@@ -33,6 +33,13 @@ class SegmentationEngine:
         market_insights = {}
         quality_data = {}
         
+        # Add processing state to prevent loops
+        if not hasattr(self, '_processing_started'):
+            self._processing_started = True
+        else:
+            st.error("❌ Processing already in progress. Please refresh the page to start a new analysis.")
+            return None
+        
         # Phase 1: Enhanced Data Validation & Processing (NEW)
         with st.status("📋 Validating and processing enhanced questionnaire data...", expanded=True) as status:
             st.write("**What's happening:** Validating PRD compliance and extracting business intelligence")
@@ -254,14 +261,19 @@ class SegmentationEngine:
             # Display JTBD results
             st.write("**✅ JTBD Analysis Results:**")
             
-            if jtbd_analysis['framework_type'] == 'B2B':
-                role_analyses = jtbd_analysis['role_analyses']
-                st.write(f"• **Roles Analyzed:** {len(role_analyses)} key business roles")
+            if jtbd_analysis.get('framework_type') == 'B2B':
+                role_analyses = jtbd_analysis.get('role_analyses', {})
                 
-                # Show role-specific insights
-                for role_key, role_data in role_analyses.items():
-                    if isinstance(role_data, dict) and 'title' in str(role_data):
-                        st.write(f"  - {role_key.replace('_', ' ').title()}: Functional, emotional, and social job mapping")
+                # Handle case where role_analyses might be a string instead of dict
+                if isinstance(role_analyses, dict):
+                    st.write(f"• **Roles Analyzed:** {len(role_analyses)} key business roles")
+                    
+                    # Show role-specific insights
+                    for role_key, role_data in role_analyses.items():
+                        if isinstance(role_data, dict):
+                            st.write(f"  - {role_key.replace('_', ' ').title()}: Functional, emotional, and social job mapping")
+                else:
+                    st.write("• **Roles Analyzed:** B2B role analysis completed")
                 
                 # Show decision journey insights
                 if 'decision_journey_map' in jtbd_analysis:
@@ -269,19 +281,31 @@ class SegmentationEngine:
                 
                 # Show trigger calendar
                 if 'trigger_events_calendar' in jtbd_analysis:
-                    triggers = jtbd_analysis['trigger_events_calendar']
-                    total_triggers = sum(len(trigger_list) for trigger_list in triggers.values())
-                    st.write(f"• **Trigger Events:** {total_triggers} timing factors identified")
+                    triggers = jtbd_analysis.get('trigger_events_calendar', {})
+                    if isinstance(triggers, dict):
+                        try:
+                            total_triggers = sum(len(trigger_list) for trigger_list in triggers.values() if isinstance(trigger_list, list))
+                            st.write(f"• **Trigger Events:** {total_triggers} timing factors identified")
+                        except (TypeError, AttributeError):
+                            st.write("• **Trigger Events:** Timing factors analysis completed")
+                    else:
+                        st.write("• **Trigger Events:** Timing factors analysis completed")
                 
-            elif jtbd_analysis['framework_type'] == 'B2C':
+            elif jtbd_analysis.get('framework_type') == 'B2C':
                 st.write("• **Customer JTBD:** Functional, emotional, and social job analysis completed")
                 st.write("• **Decision Journey:** 5-stage customer journey mapped")
                 st.write("• **Psychographic Profile:** Values, lifestyle, and behavioral insights")
                 
                 if 'trigger_events_calendar' in jtbd_analysis:
-                    triggers = jtbd_analysis['trigger_events_calendar']
-                    total_triggers = sum(len(trigger_list) for trigger_list in triggers.values())
-                    st.write(f"• **Purchase Triggers:** {total_triggers} buying triggers categorized")
+                    triggers = jtbd_analysis.get('trigger_events_calendar', {})
+                    if isinstance(triggers, dict):
+                        try:
+                            total_triggers = sum(len(trigger_list) for trigger_list in triggers.values() if isinstance(trigger_list, list))
+                            st.write(f"• **Purchase Triggers:** {total_triggers} buying triggers categorized")
+                        except (TypeError, AttributeError):
+                            st.write("• **Purchase Triggers:** Buying triggers analysis completed")
+                    else:
+                        st.write("• **Purchase Triggers:** Buying triggers analysis completed")
             
             # Store JTBD analysis for later use
             self.jtbd_analysis = jtbd_analysis
@@ -390,8 +414,8 @@ class SegmentationEngine:
             start_time = time.time()
             
             # Create messaging framework first
-            progress_text = st.empty()
-            progress_text.write("💬 Creating messaging frameworks...")
+            st.write("💬 Creating messaging frameworks...")
+            time.sleep(0.1)  # Brief pause to prevent UI flickering
             
             messaging_framework = asyncio.run(
                 self.messaging_service.create_messaging_framework(
@@ -400,7 +424,8 @@ class SegmentationEngine:
                 )
             )
             
-            progress_text.write("🎯 Developing GTM strategy...")
+            st.write("🎯 Developing GTM strategy...")
+            time.sleep(0.1)  # Brief pause to prevent UI flickering
             
             # Develop full GTM strategy
             gtm_strategy = asyncio.run(
@@ -590,6 +615,9 @@ class SegmentationEngine:
         st.write("• Professional PDF report")
         st.write("• Machine-readable JSON data")
         st.write("• Implementation roadmap")
+        
+        # Reset processing state to allow future analyses
+        self._processing_started = False
         
         return SegmentationResults(
             market_analysis=market_analysis,
